@@ -3,12 +3,21 @@ import { z } from "zod";
 
 import {
   ApplyPatchInputSchema,
+  CanvasFocusInputSchema,
   CanvasGetInputSchema,
   HistoryInputSchema,
   NodeTypesInputSchema,
   QueueCurrentInputSchema,
   ReplaceCanvasInputSchema,
   RestoreCanvasInputSchema,
+  WorkflowCloseInputSchema,
+  WorkflowCreateInputSchema,
+  WorkflowGetInputSchema,
+  WorkflowListInputSchema,
+  WorkflowRenameInputSchema,
+  WorkflowReorderInputSchema,
+  WorkflowSaveInputSchema,
+  WorkflowSelectInputSchema,
 } from "./canvas-protocol.js";
 import { serializeError } from "./errors.js";
 import type { ToolHandlers } from "./tool-handlers.js";
@@ -26,6 +35,13 @@ const SAFE_WRITE = {
   readOnlyHint: false,
   destructiveHint: false,
   idempotentHint: false,
+  openWorldHint: false,
+} as const;
+
+const UI_WRITE = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: true,
   openWorldHint: false,
 } as const;
 
@@ -62,7 +78,7 @@ async function executeTool(action: () => Promise<unknown>) {
   }
 }
 
-export const SERVER_INSTRUCTIONS = `Read the current canvas with comfy_canvas_get before every canvas write. Pass that exact expected_revision to apply, replace, or restore. Never guess a canvas session when more than one is active; call comfy_canvas_list and select the intended session. Canvas writes affect the user's open, possibly unsaved workflow. Prefer node-level comfy_canvas_apply_patch over whole-workflow replacement, retain the returned backup_id, and use comfy_canvas_restore when the user asks to undo an MCP change. The first release supports only the root canvas. The server never starts or stops Comfy Desktop and only connects to a loopback ComfyUI server.`;
+export const SERVER_INSTRUCTIONS = `Call comfy_canvas_list to choose the Comfy Desktop WebView session, then comfy_workflow_list to enumerate its internal tabs. Read the current canvas or target tab with comfy_canvas_get or comfy_workflow_get before every write and pass that exact expected_revision. Never guess a session or workflow ID. Writes visibly activate the exact target tab first. Prefer node-level comfy_canvas_apply_patch over replacement, retain backup_id, and restore only into the same workflow tab. Modified-tab close requires confirm_discard=true. The server never starts or stops Comfy Desktop and only connects to loopback ComfyUI.`;
 
 export function createMcpServer(handlers: ToolHandlers): McpServer {
   const server = new McpServer(
@@ -104,6 +120,101 @@ export function createMcpServer(handlers: ToolHandlers): McpServer {
       annotations: READ_ONLY,
     },
     (args) => executeTool(() => handlers.comfy_canvas_list(args)),
+  );
+
+  server.registerTool(
+    "comfy_workflow_list",
+    {
+      title: "List open Comfy workflow tabs",
+      description:
+        "List every internal workflow tab in the selected Comfy Desktop session, including active state, counts, and revisions.",
+      inputSchema: WorkflowListInputSchema,
+      annotations: READ_ONLY,
+    },
+    (args) => executeTool(() => handlers.comfy_workflow_list(args)),
+  );
+
+  server.registerTool(
+    "comfy_workflow_get",
+    {
+      title: "Read a Comfy workflow tab",
+      description:
+        "Read one open workflow tab by workflow_id without changing the visible tab when it is inactive.",
+      inputSchema: WorkflowGetInputSchema,
+      annotations: READ_ONLY,
+    },
+    (args) => executeTool(() => handlers.comfy_workflow_get(args)),
+  );
+
+  server.registerTool(
+    "comfy_workflow_select",
+    {
+      title: "Select a Comfy workflow tab",
+      description:
+        "Activate one open workflow tab so it becomes visible in Comfy Desktop.",
+      inputSchema: WorkflowSelectInputSchema,
+      annotations: UI_WRITE,
+    },
+    (args) => executeTool(() => handlers.comfy_workflow_select(args)),
+  );
+
+  server.registerTool(
+    "comfy_workflow_create",
+    {
+      title: "Create a Comfy workflow tab",
+      description:
+        "Create and visibly activate a new temporary workflow tab, optionally from workflow JSON.",
+      inputSchema: WorkflowCreateInputSchema,
+      annotations: SAFE_WRITE,
+    },
+    (args) => executeTool(() => handlers.comfy_workflow_create(args)),
+  );
+
+  server.registerTool(
+    "comfy_workflow_save",
+    {
+      title: "Save a Comfy workflow tab",
+      description:
+        "Save a non-temporary workflow after verifying its exact expected_revision.",
+      inputSchema: WorkflowSaveInputSchema,
+      annotations: SAFE_WRITE,
+    },
+    (args) => executeTool(() => handlers.comfy_workflow_save(args)),
+  );
+
+  server.registerTool(
+    "comfy_workflow_rename",
+    {
+      title: "Rename a Comfy workflow tab",
+      description:
+        "Rename an open workflow to a conflict-free workflows/...json path without overwriting another workflow.",
+      inputSchema: WorkflowRenameInputSchema,
+      annotations: SAFE_WRITE,
+    },
+    (args) => executeTool(() => handlers.comfy_workflow_rename(args)),
+  );
+
+  server.registerTool(
+    "comfy_workflow_close",
+    {
+      title: "Close a Comfy workflow tab",
+      description:
+        "Close an open workflow tab. Modified tabs require confirm_discard=true; files are never deleted.",
+      inputSchema: WorkflowCloseInputSchema,
+      annotations: DESTRUCTIVE_WRITE,
+    },
+    (args) => executeTool(() => handlers.comfy_workflow_close(args)),
+  );
+
+  server.registerTool(
+    "comfy_workflow_reorder",
+    {
+      title: "Reorder Comfy workflow tabs",
+      description: "Move one open workflow tab to a zero-based display index.",
+      inputSchema: WorkflowReorderInputSchema,
+      annotations: UI_WRITE,
+    },
+    (args) => executeTool(() => handlers.comfy_workflow_reorder(args)),
   );
 
   server.registerTool(
@@ -152,6 +263,18 @@ export function createMcpServer(handlers: ToolHandlers): McpServer {
       annotations: SAFE_WRITE,
     },
     (args) => executeTool(() => handlers.comfy_canvas_restore(args)),
+  );
+
+  server.registerTool(
+    "comfy_canvas_focus",
+    {
+      title: "Focus Comfy canvas nodes",
+      description:
+        "Activate an optional workflow tab, select nodes, and move the visible viewport to the selection or full graph.",
+      inputSchema: CanvasFocusInputSchema,
+      annotations: UI_WRITE,
+    },
+    (args) => executeTool(() => handlers.comfy_canvas_focus(args)),
   );
 
   server.registerTool(

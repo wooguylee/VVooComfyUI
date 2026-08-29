@@ -224,3 +224,42 @@ Comfy Desktop 설치 기록에서 로컬 ComfyUI root를 자동 감지하고, �
 - ComfyUI 프로세스 시작 시각도 변하지 않아 설치 과정에서 재실행하지 않았다.
 
 사용자가 Comfy Desktop을 완전히 재실행하기 전까지 진행하라는 범위가 완료됐으므로 여기서 멈춘다. 재실행 후에는 bridge status와 frontend session을 확인하고, 현재 workflow snapshot을 확보한 다음 안전한 live canvas 읽기·쓰기 통합 검증을 계속한다.
+
+## 10. 내부 workflow 탭 전체 분석과 실시간 제어 확장
+
+### 사용자 요구
+
+- 현재 Comfy Desktop에 열린 각 내부 workflow 탭의 모든 노드를 Codex가 분석·설명해야 한다.
+- 필요하면 대상 탭에 노드를 추가하고 설정하며, 사용자가 그 탭 전환과 변경 결과를 실시간으로 봐야 한다.
+- 가능한 많은 캔버스·탭 기능을 MCP로 수행하되 Computer Use는 사용하지 않는다.
+- Comfy Desktop을 재시작해야 하는 지점 전까지 추가 확인 없이 권장안으로 구현·설정을 완료한다.
+
+### Assistant 진행 결정
+
+기존 `comfy_canvas_list`는 내부 workflow 탭이 아니라 WebView/browser 세션만 나열한다는 코드 경계를 확인했다. 공식 ComfyUI frontend가 확장에 노출하는 `app.extensionManager.workflow` store를 사용해 내부 탭을 별도 제어하고, `app.rootGraph`와 `app.canvas`를 사용해 대상 탭을 화면에서 먼저 활성화한 뒤 수정하도록 구조를 확정했다.
+
+추가 범위는 다음과 같다.
+
+- 내부 탭 전체 list/get/select
+- 탭 create/save/rename/close/reorder
+- 비활성 탭을 전환하지 않는 읽기와 쓰기 전 가시적 활성화
+- workflow ID와 revision을 함께 사용하는 탭별 원자적 patch
+- 실행 mode, 전경·배경색, collapse 변경
+- 노드 선택과 selection/전체 그래프 viewport 이동
+- workflow 객체에 귀속된 snapshot과 교차 탭 복원 거절
+- root 프로젝트와 `dev` 양쪽 MCP 설정의 실제 build 경로 수정
+
+구현과 설치 검증이 끝나면 실행 중인 Comfy Desktop을 자동 종료하지 않고 사용자 재시작 경계에서 멈춘다.
+
+### Assistant 재시작 직전 결과
+
+- 내부 workflow 탭 8개 수명주기 도구와 `comfy_canvas_focus`를 추가해 MCP 도구를 총 20개로 확장했다.
+- 기존 canvas 쓰기도 `workflow_id`를 받아 해당 탭을 화면에서 활성화한 뒤 revision을 다시 확인한다.
+- mode/color/collapse, 탭별 snapshot, 교차 탭 복원 거절과 같은 탭 rollback을 구현했다.
+- JavaScript 47개, Node 79개, Python 20개 테스트와 TypeScript build가 통과했다.
+- root와 `dev` MCP 설정을 실제 `dev/dist/index.js` 위치로 맞췄다.
+- 이전 source를 가리키던 ComfyUI junction 자체를 새 `dev` source로 migration했다. target source 데이터는 삭제하지 않았다.
+- token 형식, junction target, build, 설정 파싱과 현재 ComfyUI HTTP 200을 확인했다.
+- 새 bridge status는 아직 HTTP 404이므로 실행 중인 Comfy Desktop은 새 확장을 로드하지 않은 상태다.
+
+여기서 Comfy Desktop을 자동 재시작하지 않고 멈춘다. 사용자가 완전히 재시작하고 새 Codex 세션을 열면 `comfy_status` → `comfy_workflow_list` → 각 `comfy_workflow_get` 순서로 모든 탭과 노드를 분석한다.

@@ -6,6 +6,10 @@ export class FakeNode {
     this.pos = [0, 0];
     this.size = [200, 100];
     this.properties = {};
+    this.mode = definition.mode ?? 0;
+    this.flags = {};
+    this.color = null;
+    this.bgcolor = null;
     this.inputs = (definition.inputs ?? []).map((slot) => ({
       name: slot.name,
       type: slot.type ?? "*",
@@ -88,6 +92,10 @@ export class FakeNode {
       pos: [...this.pos],
       size: [...this.size],
       properties: structuredClone(this.properties),
+      mode: this.mode,
+      flags: structuredClone(this.flags),
+      color: this.color,
+      bgcolor: this.bgcolor,
       widgets_values: this.widgets.map((widget) => structuredClone(widget.value)),
       inputs: this.inputs.map((input) => ({ ...input })),
       outputs: this.outputs.map((output) => ({
@@ -174,6 +182,10 @@ export class FakeGraph {
       node.pos = [...serialized.pos];
       node.size = [...serialized.size];
       node.properties = structuredClone(serialized.properties ?? {});
+      node.mode = serialized.mode ?? 0;
+      node.flags = structuredClone(serialized.flags ?? {});
+      node.color = serialized.color ?? null;
+      node.bgcolor = serialized.bgcolor ?? null;
       this.add(node);
       for (let index = 0; index < node.widgets.length; index += 1) {
         node.widgets[index].value = structuredClone(serialized.widgets_values?.[index]);
@@ -227,9 +239,24 @@ export function createFixture() {
       return definition ? new FakeNode(type, definition) : null;
     },
   };
+  const canvas = {
+    graph,
+    selected: [],
+    centered: null,
+    ds: { scale: 1, offset: [0, 0] },
+    canvas: { width: 1000, height: 800 },
+    setDirty: (...args) => graph.setDirtyCanvas(...args),
+    selectNodes(nodes) {
+      this.selected = [...(nodes ?? graph._nodes)];
+    },
+    centerOnNode(node) {
+      this.centered = node;
+    },
+  };
   const app = {
     graph,
-    canvas: { graph, setDirty: (...args) => graph.setDirtyCanvas(...args) },
+    rootGraph: graph,
+    canvas,
     async loadGraphData(workflow) {
       graph.load(structuredClone(workflow));
       this.canvas.graph = graph;

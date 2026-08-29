@@ -11,3 +11,12 @@ default_tools_approval_mode = "writes"
 COMFY_BIN = "W:\\WorkAI\\VVooComfyUI\\.venv-comfy-mcp\\Scripts\\comfy.exe"
 PYTHONUTF8 = "1"
 
+[mcp_servers.vvoo_comfy]
+command = "node"
+args = ["dist/index.js"]
+cwd = "W:\\WorkAI\\VVooComfyUI\\dev"
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+enabled = true
+required = false
+default_tools_approval_mode = "writes"

@@ -265,3 +265,65 @@ Git 결과:
 - 실행 중 ComfyUI Python process 생성 시각은 모두 `2026-08-29 17:53:16`으로 유지돼 설치 중 재실행하지 않았음
 
 404는 현재 프로세스가 새 custom extension을 아직 import하지 않았다는 예상 결과다. 다음 단계는 사용자가 Comfy Desktop을 완전히 재실행하는 것이며, 그 전에는 live canvas write를 수행하지 않는다.
+
+### 단계 9: 내부 workflow 탭 조회·수명주기·실시간 제어 확장
+
+상태: 구현·설정·설치 검증 완료, 사용자 재시작 직전
+
+확정 구조:
+
+- `comfy_canvas_list`는 ComfyUI WebView/browser 세션을 선택한다.
+- `comfy_workflow_list`와 `workflow_id`는 그 세션 안의 내부 workflow 탭을 선택한다.
+- 공식 `app.extensionManager.workflow` store로 탭을 조회·생성·저장·이름 변경·닫기·정렬한다.
+- 쓰기는 대상 탭을 `app.loadGraphData(..., workflow)`로 먼저 화면에 활성화한 뒤 `app.rootGraph`를 수정한다.
+- snapshot은 workflow 객체에 귀속해 다른 탭 복원을 거절하고 같은 객체의 rename은 허용한다.
+
+TDD RED 확인:
+
+- `workflow-runtime.js` 부재로 새 workflow 테스트 suite가 실패했다.
+- workflow 명령, canvas focus, mode/color/collapse와 snapshot 귀속 부재로 JavaScript 테스트 8개가 실패했다.
+- 새 Python command allowlist와 capability 부재로 route 테스트가 실패했다.
+- 새 Zod schema, handler와 MCP registration 부재로 Node 테스트 19개가 실패했다.
+- 공식 store처럼 새 임시 workflow가 즉시 `openWorkflows`에 들어가지 않는 경계에서 create/last-close 테스트 2개가 실패했다.
+- `app.graph` alias가 없는 `app.rootGraph` 전용 경계와 같은 탭 replace/restore load binding, `loadGraphData=false` 경계를 각각 재현했다.
+
+GREEN 및 전체 검증:
+
+- `npm run test:js`: 4 files, 47 tests passed
+- `npm run test:node`: 6 files, 79 tests passed
+- `npm run verify`: Vitest 10 files, 126 tests passed; Python 20 tests passed; TypeScript build 성공
+- browser JavaScript 5개와 `dist/index.js`의 `node --check`: 성공
+- 시스템 Python과 ComfyUI 번들 Python compileall: 성공
+- `git diff --check`: 성공
+
+구현 결과:
+
+- 내부 탭 `list/get/select/create/save/rename/close/reorder` 명령과 MCP 도구 8개
+- `comfy_canvas_focus` 노드 선택과 selection/전체 그래프 viewport 이동
+- 기존 canvas get/patch/replace/restore/to_prompt에 선택적인 `workflow_id`
+- 실행 mode, node color/bgcolor, collapse patch와 add-node 초기값
+- 활성·비활성 workflow JSON, 노드·링크·widget 요약과 SHA-256 revision
+- 쓰기 전 가시적 탭 활성화와 활성화 후 revision 재검사
+- patch 성공 시 ComfyUI ChangeTracker capture로 activeState·수정 표시 동기화
+- replace/restore/rollback 시 ChangeTracker restoring 경계로 같은 탭 상태 유지
+- 같은 workflow에 귀속된 최근 10개 snapshot과 교차 탭 복원 거절
+- 수정 탭 close 확인, rename 충돌 거절, 마지막 탭 close 전 빈 탭 생성
+- `app.rootGraph` 우선 사용과 같은 탭에 귀속된 rollback/replace/restore
+- Python command allowlist/status capability와 총 20개 MCP 도구 등록
+
+설정과 설치:
+
+- root `.codex/config.toml`에 기존 공식 `comfy_mcp`를 보존하면서 `vvoo_comfy`를 추가했다.
+- root와 `dev/.codex/config.toml` 모두 `cwd=W:\WorkAI\VVooComfyUI\dev`, `args=["dist/index.js"]`를 가리킨다.
+- `-WhatIf`에서 알려진 이전 junction target만 새 `dev` source로 migration하는 두 작업을 확인했다.
+- 실제 junction 상태: `legacy-migrated`
+- 최종 junction target: `W:\WorkAI\VVooComfyUI\dev\comfy-extension\vvoo_comfy_mcp`
+- 이전 junction 자체만 제거·재생성했으며 target source 데이터는 삭제하지 않았다.
+- token은 값을 출력하지 않고 존재, 길이 64, `^[a-f0-9]{64}$` 일치를 확인했다.
+- `dist/index.js` 존재, 두 TOML의 cwd/args 파싱, `/api/system_stats` HTTP 200을 확인했다.
+- 인증된 `/api/vvoo_mcp/status`는 HTTP 404이며 새 workflow capability는 아직 로드되지 않았다.
+- 최종 설치 스크립트 재실행: `TokenState=already-present`, `JunctionState=already-installed`, `RestartRequired=True`.
+- 최종 읽기 전용 재확인: junction target 정확히 일치, token 길이/형식 정상, build entry 존재, `/api/system_stats` HTTP 200, 인증된 bridge status HTTP 404.
+- 현재 ComfyUI Python process 시작 시각: `2026-08-29 20:58:22`, `2026-08-29 20:58:33`; 이 단계에서는 프로세스를 종료하거나 재시작하지 않았다.
+
+현재 404는 실행 중인 Comfy Desktop을 자동 종료하지 않았고 새 Python route/frontend JavaScript가 아직 메모리에 로드되지 않았음을 뜻한다. 다음 단계는 사용자가 Comfy Desktop을 완전히 재시작하고 Codex 프로젝트를 새 세션으로 여는 것이다.

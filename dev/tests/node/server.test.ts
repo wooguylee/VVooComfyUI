@@ -54,10 +54,19 @@ describe("MCP server", () => {
       "comfy_status",
       "comfy_node_types",
       "comfy_canvas_list",
+      "comfy_workflow_list",
+      "comfy_workflow_get",
+      "comfy_workflow_select",
+      "comfy_workflow_create",
+      "comfy_workflow_save",
+      "comfy_workflow_rename",
+      "comfy_workflow_close",
+      "comfy_workflow_reorder",
       "comfy_canvas_get",
       "comfy_canvas_apply_patch",
       "comfy_canvas_replace",
       "comfy_canvas_restore",
+      "comfy_canvas_focus",
       "comfy_queue_current",
       "comfy_queue_get",
       "comfy_interrupt",
@@ -70,8 +79,32 @@ describe("MCP server", () => {
       tools.tools.find((tool) => tool.name === "comfy_canvas_replace")
         ?.annotations,
     ).toMatchObject({ readOnlyHint: false, destructiveHint: true });
+    expect(
+      tools.tools.find((tool) => tool.name === "comfy_workflow_get")
+        ?.annotations,
+    ).toMatchObject({ readOnlyHint: true, destructiveHint: false });
+    expect(
+      tools.tools.find((tool) => tool.name === "comfy_workflow_close")
+        ?.annotations,
+    ).toMatchObject({ readOnlyHint: false, destructiveHint: true });
     expect(client.getInstructions()).toMatch(/read the current canvas/i);
     expect(client.getInstructions()).toMatch(/expected_revision/i);
+  });
+
+  it("calls an internal workflow read through the MCP transport", async () => {
+    const { client, dependencies } = await createConnectedClient();
+
+    const result = await client.callTool({
+      name: "comfy_workflow_get",
+      arguments: { workflow_id: "workflows/demo.json" },
+    });
+
+    expect(result.isError).not.toBe(true);
+    expect(dependencies.bridge.command).toHaveBeenCalledWith({
+      command: "workflow.get",
+      payload: { workflow_id: "workflows/demo.json" },
+      timeout_ms: 15_000,
+    });
   });
 
   it("calls a read tool through the MCP transport", async () => {

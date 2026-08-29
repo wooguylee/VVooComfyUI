@@ -27,6 +27,22 @@ ALLOWED_COMMANDS = {
     "canvas.replace",
     "canvas.restore",
     "canvas.to_prompt",
+    "canvas.focus",
+    "workflow.list",
+    "workflow.get",
+    "workflow.select",
+    "workflow.create",
+    "workflow.save",
+    "workflow.rename",
+    "workflow.close",
+    "workflow.reorder",
+}
+
+CAPABILITIES = {
+    "workflow_tabs": True,
+    "workflow_lifecycle": True,
+    "canvas_focus": True,
+    "snapshot_workflow_binding": True,
 }
 
 _local_app_data = os.environ.get("LOCALAPPDATA")
@@ -44,9 +60,21 @@ _state = BridgeState(
 
 
 def _error_status(code: str, fallback: int = 400) -> int:
-    if code in {"REVISION_CONFLICT", "AMBIGUOUS_CANVAS_SESSION"}:
+    if code in {
+        "REVISION_CONFLICT",
+        "WORKFLOW_REVISION_CONFLICT",
+        "WORKFLOW_PATH_CONFLICT",
+        "WORKFLOW_DISCARD_CONFIRMATION_REQUIRED",
+        "SNAPSHOT_WORKFLOW_MISMATCH",
+        "AMBIGUOUS_CANVAS_SESSION",
+    }:
         return 409
-    if code in {"NO_CANVAS_SESSION", "SESSION_GONE", "REQUEST_NOT_FOUND"}:
+    if code in {
+        "NO_CANVAS_SESSION",
+        "SESSION_GONE",
+        "REQUEST_NOT_FOUND",
+        "WORKFLOW_NOT_FOUND",
+    }:
         return 404
     if code == "AUTH_FAILED":
         return 401
@@ -164,7 +192,15 @@ async def frontend_result(request: web.Request) -> web.Response:
 async def list_sessions(request: web.Request) -> web.Response:
     try:
         _require_master(request)
-        return web.json_response({"ok": True, "result": _state.list_sessions()})
+        return web.json_response(
+            {
+                "ok": True,
+                "result": {
+                    **_state.list_sessions(),
+                    "capabilities": CAPABILITIES,
+                },
+            }
+        )
     except BridgeError as error:
         return _failure_response(error)
     except Exception as error:
@@ -181,6 +217,7 @@ async def bridge_status(request: web.Request) -> web.Response:
                 "result": {
                     "loaded": True,
                     "protocol_version": PROTOCOL_VERSION,
+                    "capabilities": CAPABILITIES,
                     **_state.list_sessions(),
                 },
             }

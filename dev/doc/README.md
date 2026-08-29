@@ -15,6 +15,8 @@
 
 - [대화 기록](conversation/2026-08-29-comfy-desktop-mcp.md)
 - [실시간 캔버스 MCP 설계 명세](specs/2026-08-29-realtime-comfy-canvas-mcp-design.md)
-- [구현 계획](plans/2026-08-29-realtime-comfy-canvas-mcp.md)
+- [실시간 workflow 탭 제어 설계 명세](specs/2026-08-29-live-workflow-tabs-control-design.md)
+- [초기 캔버스 구현 계획](plans/2026-08-29-realtime-comfy-canvas-mcp.md)
+- [workflow 탭 제어 구현 계획](plans/2026-08-29-live-workflow-tabs-control.md)
 - [설치와 운영](setup-and-operations.md)
 - [작업 로그](work-log.md)

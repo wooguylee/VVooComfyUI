@@ -73,6 +73,9 @@ $projectRoot = Get-NormalizedPath (Resolve-Path -LiteralPath (Join-Path $PSScrip
 $source = Get-NormalizedPath (Resolve-Path -LiteralPath (
     Join-Path $projectRoot 'comfy-extension\vvoo_comfy_mcp'
 )).Path
+$legacySource = Get-NormalizedPath (Join-Path (
+    Split-Path -Parent $projectRoot
+) 'comfy-extension\vvoo_comfy_mcp')
 $resolvedComfyRoot = Resolve-ComfyRoot $ComfyRoot
 $customNodesRoot = Get-NormalizedPath (Resolve-Path -LiteralPath (
     Join-Path $resolvedComfyRoot 'custom_nodes'
@@ -88,6 +91,7 @@ if (-not $destination.StartsWith(
 
 $junctionState = 'planned-create'
 $junctionNeedsCreation = $true
+$junctionNeedsMigration = $false
 if (Test-Path -LiteralPath $destination) {
     $existing = Get-Item -Force -LiteralPath $destination
     if ($existing.LinkType -ne 'Junction') {
@@ -99,10 +103,20 @@ if (Test-Path -LiteralPath $destination) {
         $source,
         [System.StringComparison]::OrdinalIgnoreCase
     )) {
-        throw "Extension junction points elsewhere: $destination -> $existingTarget"
+        if ([string]::Equals(
+            $existingTarget,
+            $legacySource,
+            [System.StringComparison]::OrdinalIgnoreCase
+        )) {
+            $junctionState = 'planned-legacy-migration'
+            $junctionNeedsMigration = $true
+        } else {
+            throw "Extension junction points elsewhere: $destination -> $existingTarget"
+        }
+    } else {
+        $junctionState = 'already-installed'
+        $junctionNeedsCreation = $false
     }
-    $junctionState = 'already-installed'
-    $junctionNeedsCreation = $false
 }
 
 $tokenDirectory = Get-NormalizedPath (Join-Path $env:LOCALAPPDATA 'VVooComfyUI')
@@ -130,9 +144,16 @@ if (-not $tokenExists -or $ForceTokenRotation) {
     }
 }
 
+if ($junctionNeedsMigration -and $PSCmdlet.ShouldProcess(
+    $destination,
+    "Replace known legacy junction target $legacySource"
+)) {
+    Remove-Item -LiteralPath $destination
+}
+
 if ($junctionNeedsCreation -and $PSCmdlet.ShouldProcess($destination, "Create junction to $source")) {
     New-Item -ItemType Junction -Path $destination -Target $source | Out-Null
-    $junctionState = 'created'
+    $junctionState = if ($junctionNeedsMigration) { 'legacy-migrated' } else { 'created' }
 }
 
 [pscustomobject]@{

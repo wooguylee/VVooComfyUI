@@ -54,6 +54,48 @@ describe("dispatchCanvasCommand", () => {
     expect(result.summary.nodes[0].type).toBe("Target");
   });
 
+  it("dispatches workflow commands", async () => {
+    const { app, graph, context } = createContext();
+    const workflow = {
+      path: "workflows/current.json",
+      filename: "current",
+      key: "current.json",
+      isLoaded: true,
+      isModified: false,
+      isTemporary: false,
+      activeState: graph.serialize(),
+    };
+    app.extensionManager = {
+      workflow: {
+        activeWorkflow: workflow,
+        openWorkflows: [workflow],
+        isBusy: false,
+        getWorkflowByPath: (path) => (path === workflow.path ? workflow : null),
+      },
+    };
+
+    const result = await dispatchCanvasCommand(context, "workflow.list", {});
+
+    expect(result.active_workflow_id).toBe(workflow.path);
+    expect(result.workflows).toHaveLength(1);
+  });
+
+  it("selects and centers requested nodes on the visible canvas", async () => {
+    const { graph, liteGraph, app, context } = createContext();
+    const first = graph.add(liteGraph.createNode("Source"));
+    const second = graph.add(liteGraph.createNode("Target"));
+
+    const result = await dispatchCanvasCommand(context, "canvas.focus", {
+      node_ids: [first.id, second.id],
+      select: true,
+      fit: "selection",
+    });
+
+    expect(app.canvas.selected).toEqual([first, second]);
+    expect(result.focused_node_ids).toEqual([first.id, second.id]);
+    expect(result.fit).toBe("selection");
+  });
+
   it("rejects unknown commands with a stable protocol error", async () => {
     const { context } = createContext();
 

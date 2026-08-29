@@ -1,4 +1,5 @@
-import { cloneJson, getCanvasState } from "./graph-state.js";
+import { cloneJson, getCanvasState, getRootGraph } from "./graph-state.js";
+import { activateWorkflow } from "./workflow-runtime.js";
 
 export class CanvasError extends Error {
   constructor(code, message, details = {}) {
@@ -10,7 +11,8 @@ export class CanvasError extends Error {
 }
 
 function assertRootCanvas(app) {
-  if (app.canvas?.graph !== undefined && app.canvas.graph !== app.graph) {
+  const graph = getRootGraph(app);
+  if (app.canvas?.graph !== undefined && app.canvas.graph !== graph) {
     throw new CanvasError(
       "SUBGRAPH_UNSUPPORTED",
       "Canvas writes are allowed only while the root graph is visible",
@@ -75,16 +77,64 @@ async function setWidget(node, name, value) {
 }
 
 function markDirty(app) {
-  if (typeof app.graph?.setDirtyCanvas === "function") {
-    app.graph.setDirtyCanvas(true, true);
+  const graph = getRootGraph(app);
+  if (typeof graph?.setDirtyCanvas === "function") {
+    graph.setDirtyCanvas(true, true);
   } else if (typeof app.canvas?.setDirty === "function") {
     app.canvas.setDirty(true, true);
   }
 }
 
+function captureActiveWorkflow(app) {
+  const tracker = app.extensionManager?.workflow?.activeWorkflow?.changeTracker;
+  tracker?.captureCanvasState?.();
+}
+
+async function loadIntoActiveWorkflow(app, workflow) {
+  const activeWorkflow = app.extensionManager?.workflow?.activeWorkflow;
+  const tracker = activeWorkflow?.changeTracker;
+  const previousRestoringState = tracker?._restoringState;
+  const previousState =
+    tracker?.activeState === undefined
+      ? undefined
+      : cloneJson(tracker.activeState);
+  let loaded;
+  if (tracker) tracker._restoringState = true;
+  try {
+    if (!activeWorkflow) {
+      loaded = await app.loadGraphData(cloneJson(workflow));
+    } else {
+      loaded = await app.loadGraphData(
+        cloneJson(workflow),
+        true,
+        true,
+        activeWorkflow,
+        {
+          checkForRerouteMigration: false,
+          deferWarnings: true,
+          skipAssetScans: true,
+        },
+      );
+    }
+    if (loaded === false) {
+      throw new CanvasError(
+        "CANVAS_LOAD_FAILED",
+        "ComfyUI did not load the requested workflow state",
+      );
+    }
+    if (tracker) {
+      tracker.activeState = cloneJson(workflow);
+      tracker.updateModified?.(previousState);
+    }
+  } finally {
+    if (tracker) tracker._restoringState = previousRestoringState ?? false;
+  }
+  return loaded;
+}
+
 async function rollback(app, workflow, backupId, error, fallbackCode) {
   try {
-    await app.loadGraphData(cloneJson(workflow));
+    await loadIntoActiveWorkflow(app, workflow);
   } catch (rollbackError) {
     throw new CanvasError(
       "PATCH_ROLLBACK_FAILED",
@@ -133,7 +183,7 @@ function assertMassDeleteAllowed(graph, operations, confirmed) {
 
 async function applyOperation(context, refs, operation) {
   const { app, liteGraph } = context;
-  const graph = app.graph;
+  const graph = getRootGraph(app);
 
   switch (operation.op) {
     case "add_node": {
@@ -148,6 +198,12 @@ async function applyOperation(context, refs, operation) {
       if (operation.position !== undefined) node.pos = [...operation.position];
       if (operation.size !== undefined) node.setSize?.([...operation.size]);
       if (operation.title !== undefined) node.title = operation.title;
+      if (operation.mode !== undefined) node.mode = operation.mode;
+      if (operation.color !== undefined) node.color = operation.color;
+      if (operation.bgcolor !== undefined) node.bgcolor = operation.bgcolor;
+      if (operation.collapsed !== undefined) {
+        node.flags = { ...(node.flags ?? {}), collapsed: operation.collapsed };
+      }
       if (operation.properties !== undefined) {
         node.properties = {
           ...(node.properties ?? {}),
@@ -195,6 +251,21 @@ async function applyOperation(context, refs, operation) {
       };
       return;
     }
+    case "set_mode": {
+      resolveNode(graph, refs, operation.node).mode = operation.mode;
+      return;
+    }
+    case "set_colors": {
+      const node = resolveNode(graph, refs, operation.node);
+      if (Object.hasOwn(operation, "color")) node.color = operation.color;
+      if (Object.hasOwn(operation, "bgcolor")) node.bgcolor = operation.bgcolor;
+      return;
+    }
+    case "set_collapsed": {
+      const node = resolveNode(graph, refs, operation.node);
+      node.flags = { ...(node.flags ?? {}), collapsed: operation.collapsed };
+      return;
+    }
     case "connect": {
       const source = resolveNode(graph, refs, operation.source);
       const target = resolveNode(graph, refs, operation.target);
@@ -228,22 +299,34 @@ async function applyOperation(context, refs, operation) {
   }
 }
 
+async function activateRequestedWorkflow(context, request) {
+  if (request.workflow_id !== undefined) {
+    await activateWorkflow(context, request.workflow_id);
+  }
+}
+
+function activeWorkflowIdentity(app) {
+  return app.extensionManager?.workflow?.activeWorkflow ?? getRootGraph(app);
+}
+
 export async function applyPatchTransaction(context, request) {
   const { app, snapshots } = context;
+  await activateRequestedWorkflow(context, request);
   assertRootCanvas(app);
   const before = await assertRevision(app, request.expected_revision);
   assertMassDeleteAllowed(
-    app.graph,
+    getRootGraph(app),
     request.operations,
     request.confirm_mass_delete === true,
   );
-  const backupId = snapshots.add(before.workflow);
+  const backupId = snapshots.add(before.workflow, activeWorkflowIdentity(app));
   const refs = new Map();
 
   try {
     for (const operation of request.operations) {
       await applyOperation(context, refs, operation);
     }
+    captureActiveWorkflow(app);
     markDirty(app);
     return {
       ...(await getCanvasState(app)),
@@ -259,6 +342,7 @@ export async function applyPatchTransaction(context, request) {
 
 export async function replaceWorkflowTransaction(context, request) {
   const { app, snapshots } = context;
+  await activateRequestedWorkflow(context, request);
   assertRootCanvas(app);
   if (request.confirm_replace !== true) {
     throw new CanvasError(
@@ -267,9 +351,9 @@ export async function replaceWorkflowTransaction(context, request) {
     );
   }
   const before = await assertRevision(app, request.expected_revision);
-  const backupId = snapshots.add(before.workflow);
+  const backupId = snapshots.add(before.workflow, activeWorkflowIdentity(app));
   try {
-    await app.loadGraphData(cloneJson(request.workflow));
+    await loadIntoActiveWorkflow(app, request.workflow);
     markDirty(app);
     return { ...(await getCanvasState(app)), backup_id: backupId };
   } catch (error) {
@@ -279,6 +363,7 @@ export async function replaceWorkflowTransaction(context, request) {
 
 export async function restoreSnapshotTransaction(context, request) {
   const { app, snapshots } = context;
+  await activateRequestedWorkflow(context, request);
   assertRootCanvas(app);
   const before = await assertRevision(app, request.expected_revision);
   const target = snapshots.get(request.backup_id);
@@ -287,9 +372,21 @@ export async function restoreSnapshotTransaction(context, request) {
       backup_id: request.backup_id,
     });
   }
-  const backupId = snapshots.add(before.workflow);
+  const activeIdentity = activeWorkflowIdentity(app);
+  if (target.workflow_ref !== activeIdentity) {
+    throw new CanvasError(
+      "SNAPSHOT_WORKFLOW_MISMATCH",
+      "Canvas snapshot belongs to a different workflow tab",
+      {
+        backup_id: request.backup_id,
+        snapshot_workflow_id: target.workflow_id,
+        active_workflow_id: activeIdentity?.path ?? null,
+      },
+    );
+  }
+  const backupId = snapshots.add(before.workflow, activeIdentity);
   try {
-    await app.loadGraphData(target);
+    await loadIntoActiveWorkflow(app, target.workflow);
     markDirty(app);
     return {
       ...(await getCanvasState(app)),

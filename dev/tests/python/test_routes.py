@@ -137,6 +137,43 @@ class RouteTests(unittest.IsolatedAsyncioTestCase):
             },
         )
 
+    def test_allows_workflow_tab_and_viewport_commands(self):
+        self.assertEqual(
+            self.extension.ALLOWED_COMMANDS,
+            {
+                "canvas.get",
+                "canvas.apply_patch",
+                "canvas.replace",
+                "canvas.restore",
+                "canvas.to_prompt",
+                "canvas.focus",
+                "workflow.list",
+                "workflow.get",
+                "workflow.select",
+                "workflow.create",
+                "workflow.save",
+                "workflow.rename",
+                "workflow.close",
+                "workflow.reorder",
+            },
+        )
+
+    async def test_status_advertises_workflow_capabilities(self):
+        response = await self.routes[("GET", "/vvoo_mcp/status")](
+            FakeRequest(headers={"Authorization": "Bearer master-secret"})
+        )
+
+        self.assertEqual(response.status, 200)
+        self.assertEqual(
+            response.payload["result"]["capabilities"],
+            {
+                "workflow_tabs": True,
+                "workflow_lifecycle": True,
+                "canvas_focus": True,
+                "snapshot_workflow_binding": True,
+            },
+        )
+
     async def test_frontend_registration_returns_a_session_token(self):
         response = await self.register_frontend()
 

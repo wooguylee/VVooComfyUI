@@ -92,6 +92,110 @@ describe("tool handlers", () => {
     });
   });
 
+  it("lists, gets, and selects internal workflow tabs", async () => {
+    const dependencies = createDependencies();
+    const handlers = createToolHandlers(dependencies);
+
+    await handlers.comfy_workflow_list({ session_id: "canvas-a" });
+    expect(dependencies.bridge.command).toHaveBeenLastCalledWith({
+      session_id: "canvas-a",
+      command: "workflow.list",
+      payload: {},
+      timeout_ms: 15_000,
+    });
+
+    await handlers.comfy_workflow_get({
+      session_id: "canvas-a",
+      workflow_id: "workflows/demo.json",
+    });
+    expect(dependencies.bridge.command).toHaveBeenLastCalledWith({
+      session_id: "canvas-a",
+      command: "workflow.get",
+      payload: { workflow_id: "workflows/demo.json" },
+      timeout_ms: 15_000,
+    });
+
+    await handlers.comfy_workflow_select({
+      workflow_id: "workflows/demo.json",
+    });
+    expect(dependencies.bridge.command).toHaveBeenLastCalledWith({
+      command: "workflow.select",
+      payload: { workflow_id: "workflows/demo.json" },
+      timeout_ms: 15_000,
+    });
+  });
+
+  it("forwards workflow lifecycle and viewport commands", async () => {
+    const dependencies = createDependencies();
+    const handlers = createToolHandlers(dependencies);
+
+    await handlers.comfy_workflow_create({ filename: "Generated.json" });
+    expect(dependencies.bridge.command).toHaveBeenLastCalledWith({
+      command: "workflow.create",
+      payload: { filename: "Generated.json" },
+      timeout_ms: 15_000,
+    });
+    await handlers.comfy_workflow_save({
+      workflow_id: "workflows/demo.json",
+      expected_revision: revision,
+    });
+    expect(dependencies.bridge.command).toHaveBeenLastCalledWith({
+      command: "workflow.save",
+      payload: {
+        workflow_id: "workflows/demo.json",
+        expected_revision: revision,
+      },
+      timeout_ms: 15_000,
+    });
+    await handlers.comfy_workflow_rename({
+      workflow_id: "workflows/demo.json",
+      new_path: "workflows/renamed.json",
+    });
+    expect(dependencies.bridge.command).toHaveBeenLastCalledWith({
+      command: "workflow.rename",
+      payload: {
+        workflow_id: "workflows/demo.json",
+        new_path: "workflows/renamed.json",
+      },
+      timeout_ms: 15_000,
+    });
+    await handlers.comfy_workflow_close({
+      workflow_id: "workflows/renamed.json",
+    });
+    expect(dependencies.bridge.command).toHaveBeenLastCalledWith({
+      command: "workflow.close",
+      payload: {
+        workflow_id: "workflows/renamed.json",
+        confirm_discard: false,
+      },
+      timeout_ms: 15_000,
+    });
+    await handlers.comfy_workflow_reorder({
+      workflow_id: "workflows/renamed.json",
+      index: 0,
+    });
+    expect(dependencies.bridge.command).toHaveBeenLastCalledWith({
+      command: "workflow.reorder",
+      payload: { workflow_id: "workflows/renamed.json", index: 0 },
+      timeout_ms: 15_000,
+    });
+    await handlers.comfy_canvas_focus({
+      workflow_id: "workflows/renamed.json",
+      node_ids: [1, "2"],
+      fit: "selection",
+    });
+    expect(dependencies.bridge.command).toHaveBeenLastCalledWith({
+      command: "canvas.focus",
+      payload: {
+        workflow_id: "workflows/renamed.json",
+        node_ids: [1, "2"],
+        select: true,
+        fit: "selection",
+      },
+      timeout_ms: 15_000,
+    });
+  });
+
   it("forwards a revision-checked patch transaction", async () => {
     const dependencies = createDependencies();
     const handlers = createToolHandlers(dependencies);
@@ -101,6 +205,7 @@ describe("tool handlers", () => {
 
     await handlers.comfy_canvas_apply_patch({
       session_id: "canvas-a",
+      workflow_id: "workflows/demo.json",
       expected_revision: revision,
       operations,
     });
@@ -110,6 +215,7 @@ describe("tool handlers", () => {
       command: "canvas.apply_patch",
       payload: {
         expected_revision: revision,
+        workflow_id: "workflows/demo.json",
         operations,
         confirm_mass_delete: false,
       },
@@ -174,6 +280,12 @@ describe("tool handlers", () => {
         },
       },
       front: true,
+    });
+    expect(dependencies.bridge.command).toHaveBeenCalledWith({
+      session_id: "canvas-a",
+      command: "canvas.to_prompt",
+      payload: {},
+      timeout_ms: 15_000,
     });
   });
 

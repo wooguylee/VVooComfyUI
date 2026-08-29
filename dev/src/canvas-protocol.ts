@@ -11,6 +11,32 @@ const CoordinateSchema = z.number().finite();
 const PositiveDimensionSchema = z.number().finite().positive();
 const PositionSchema = z.tuple([CoordinateSchema, CoordinateSchema]);
 const SizeSchema = z.tuple([PositiveDimensionSchema, PositiveDimensionSchema]);
+const NodeModeSchema = z.number().int().min(0).max(4);
+const NodeColorSchema = z.string().min(1).nullable();
+const WorkflowIdSchema = z
+  .string()
+  .min(1)
+  .refine(
+    (value) =>
+      value.startsWith("workflows/") &&
+      value.toLowerCase().endsWith(".json") &&
+      !value.includes("\\") &&
+      !value.split("/").some((segment) =>
+        segment.length === 0 || segment === "." || segment === ".."
+      ),
+    "workflow_id must be a safe workflows/...json path",
+  );
+const WorkflowFilenameSchema = z
+  .string()
+  .min(1)
+  .refine(
+    (value) =>
+      !value.includes("/") &&
+      !value.includes("\\") &&
+      value !== "." &&
+      value !== "..",
+    "filename must be a plain file name",
+  );
 
 export const NodeReferenceSchema = z.union([
   z.object({ id: z.union([z.number().int().nonnegative(), z.string().min(1)]) }).strict(),
@@ -32,6 +58,10 @@ const AddNodeOperationSchema = z
     title: z.string().optional(),
     widgets: z.record(z.string(), JsonValueSchema).optional(),
     properties: z.record(z.string(), JsonValueSchema).optional(),
+    mode: NodeModeSchema.optional(),
+    color: NodeColorSchema.optional(),
+    bgcolor: NodeColorSchema.optional(),
+    collapsed: z.boolean().optional(),
   })
   .strict();
 
@@ -43,6 +73,32 @@ export const PatchOperationSchema = z.discriminatedUnion("op", [
       op: z.literal("move_node"),
       node: NodeReferenceSchema,
       position: PositionSchema,
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("set_mode"),
+      node: NodeReferenceSchema,
+      mode: NodeModeSchema,
+    })
+    .strict(),
+  z
+    .object({
+      op: z.literal("set_colors"),
+      node: NodeReferenceSchema,
+      color: NodeColorSchema.optional(),
+      bgcolor: NodeColorSchema.optional(),
+    })
+    .strict()
+    .refine(
+      (value) => value.color !== undefined || value.bgcolor !== undefined,
+      "set_colors requires color or bgcolor",
+    ),
+  z
+    .object({
+      op: z.literal("set_collapsed"),
+      node: NodeReferenceSchema,
+      collapsed: z.boolean(),
     })
     .strict(),
   z
@@ -95,6 +151,7 @@ export const PatchOperationSchema = z.discriminatedUnion("op", [
 const SessionIdSchema = z.string().min(1).optional();
 
 const applyPatchPayloadShape = {
+  workflow_id: WorkflowIdSchema.optional(),
   expected_revision: RevisionSchema,
   operations: z.array(PatchOperationSchema).min(1),
   confirm_mass_delete: z.boolean().default(false),
@@ -136,6 +193,7 @@ export const ApplyPatchInputSchema = z
 export const ReplaceCanvasInputSchema = z
   .object({
     session_id: SessionIdSchema,
+    workflow_id: WorkflowIdSchema.optional(),
     expected_revision: RevisionSchema,
     workflow: JsonValueSchema,
     confirm_replace: z.literal(true, {
@@ -147,22 +205,134 @@ export const ReplaceCanvasInputSchema = z
 export const RestoreCanvasInputSchema = z
   .object({
     session_id: SessionIdSchema,
+    workflow_id: WorkflowIdSchema.optional(),
     expected_revision: RevisionSchema,
     backup_id: z.string().min(1),
   })
   .strict();
 
 export const CanvasGetInputSchema = z
-  .object({ session_id: SessionIdSchema })
+  .object({
+    session_id: SessionIdSchema,
+    workflow_id: WorkflowIdSchema.optional(),
+  })
   .strict();
 
 export const QueueCurrentInputSchema = z
   .object({
     session_id: SessionIdSchema,
+    workflow_id: WorkflowIdSchema.optional(),
     front: z.boolean().optional(),
     number: z.number().finite().optional(),
   })
   .strict();
+
+const WorkflowListPayloadSchema = z.object({}).strict();
+const WorkflowTargetPayloadSchema = z
+  .object({ workflow_id: WorkflowIdSchema })
+  .strict();
+const WorkflowCreatePayloadSchema = z
+  .object({
+    filename: WorkflowFilenameSchema.optional(),
+    workflow: JsonValueSchema.optional(),
+  })
+  .strict();
+const WorkflowSavePayloadSchema = z
+  .object({
+    workflow_id: WorkflowIdSchema,
+    expected_revision: RevisionSchema,
+  })
+  .strict();
+const WorkflowRenamePayloadSchema = z
+  .object({
+    workflow_id: WorkflowIdSchema,
+    new_path: WorkflowIdSchema,
+  })
+  .strict();
+const WorkflowClosePayloadSchema = z
+  .object({
+    workflow_id: WorkflowIdSchema,
+    confirm_discard: z.boolean().default(false),
+  })
+  .strict();
+const WorkflowReorderPayloadSchema = z
+  .object({
+    workflow_id: WorkflowIdSchema,
+    index: z.number().int().nonnegative(),
+  })
+  .strict();
+const CanvasFocusPayloadSchema = z
+  .object({
+    workflow_id: WorkflowIdSchema.optional(),
+    node_ids: z
+      .array(z.union([z.number().int().nonnegative(), z.string().min(1)]))
+      .default([]),
+    select: z.boolean().default(true),
+    fit: z.enum(["selection", "all"]).default("selection"),
+  })
+  .strict()
+  .refine(
+    (value) => value.fit === "all" || value.node_ids.length > 0,
+    "node_ids are required when fit is selection",
+  );
+
+export const WorkflowListInputSchema = z
+  .object({ session_id: SessionIdSchema })
+  .strict();
+export const WorkflowGetInputSchema = z
+  .object({ session_id: SessionIdSchema, workflow_id: WorkflowIdSchema })
+  .strict();
+export const WorkflowSelectInputSchema = WorkflowGetInputSchema;
+export const WorkflowCreateInputSchema = z
+  .object({
+    session_id: SessionIdSchema,
+    filename: WorkflowFilenameSchema.optional(),
+    workflow: JsonValueSchema.optional(),
+  })
+  .strict();
+export const WorkflowSaveInputSchema = z
+  .object({
+    session_id: SessionIdSchema,
+    workflow_id: WorkflowIdSchema,
+    expected_revision: RevisionSchema,
+  })
+  .strict();
+export const WorkflowRenameInputSchema = z
+  .object({
+    session_id: SessionIdSchema,
+    workflow_id: WorkflowIdSchema,
+    new_path: WorkflowIdSchema,
+  })
+  .strict();
+export const WorkflowCloseInputSchema = z
+  .object({
+    session_id: SessionIdSchema,
+    workflow_id: WorkflowIdSchema,
+    confirm_discard: z.boolean().default(false),
+  })
+  .strict();
+export const WorkflowReorderInputSchema = z
+  .object({
+    session_id: SessionIdSchema,
+    workflow_id: WorkflowIdSchema,
+    index: z.number().int().nonnegative(),
+  })
+  .strict();
+export const CanvasFocusInputSchema = z
+  .object({
+    session_id: SessionIdSchema,
+    workflow_id: WorkflowIdSchema.optional(),
+    node_ids: z
+      .array(z.union([z.number().int().nonnegative(), z.string().min(1)]))
+      .default([]),
+    select: z.boolean().default(true),
+    fit: z.enum(["selection", "all"]).default("selection"),
+  })
+  .strict()
+  .refine(
+    (value) => value.fit === "all" || value.node_ids.length > 0,
+    "node_ids are required when fit is selection",
+  );
 
 export const NodeTypesInputSchema = z
   .object({ node_class: z.string().min(1).optional() })
@@ -183,7 +353,7 @@ export const CanvasCommandSchema = z.discriminatedUnion("command", [
     .object({
       ...commandBase,
       command: z.literal("canvas.get"),
-      payload: z.object({}).strict(),
+      payload: z.object({ workflow_id: WorkflowIdSchema.optional() }).strict(),
     })
     .strict(),
   z
@@ -211,7 +381,70 @@ export const CanvasCommandSchema = z.discriminatedUnion("command", [
     .object({
       ...commandBase,
       command: z.literal("canvas.to_prompt"),
-      payload: z.object({}).strict(),
+      payload: z.object({ workflow_id: WorkflowIdSchema.optional() }).strict(),
+    })
+    .strict(),
+  z
+    .object({
+      ...commandBase,
+      command: z.literal("canvas.focus"),
+      payload: CanvasFocusPayloadSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...commandBase,
+      command: z.literal("workflow.list"),
+      payload: WorkflowListPayloadSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...commandBase,
+      command: z.literal("workflow.get"),
+      payload: WorkflowTargetPayloadSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...commandBase,
+      command: z.literal("workflow.select"),
+      payload: WorkflowTargetPayloadSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...commandBase,
+      command: z.literal("workflow.create"),
+      payload: WorkflowCreatePayloadSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...commandBase,
+      command: z.literal("workflow.save"),
+      payload: WorkflowSavePayloadSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...commandBase,
+      command: z.literal("workflow.rename"),
+      payload: WorkflowRenamePayloadSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...commandBase,
+      command: z.literal("workflow.close"),
+      payload: WorkflowClosePayloadSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...commandBase,
+      command: z.literal("workflow.reorder"),
+      payload: WorkflowReorderPayloadSchema,
     })
     .strict(),
 ]);

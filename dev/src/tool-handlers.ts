@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { BridgeCommandResult } from "./bridge-client.js";
 import {
   ApplyPatchInputSchema,
+  CanvasFocusInputSchema,
   CanvasCommandSchema,
   CanvasGetInputSchema,
   HistoryInputSchema,
@@ -10,6 +11,14 @@ import {
   QueueCurrentInputSchema,
   ReplaceCanvasInputSchema,
   RestoreCanvasInputSchema,
+  WorkflowCloseInputSchema,
+  WorkflowCreateInputSchema,
+  WorkflowGetInputSchema,
+  WorkflowListInputSchema,
+  WorkflowRenameInputSchema,
+  WorkflowReorderInputSchema,
+  WorkflowSaveInputSchema,
+  WorkflowSelectInputSchema,
   type CanvasCommand,
 } from "./canvas-protocol.js";
 import type {
@@ -99,8 +108,113 @@ export function createToolHandlers(dependencies: ToolHandlerDependencies) {
       return bridge.command(
         createCanvasCommand(
           "canvas.get",
+          parsed.workflow_id === undefined
+            ? {}
+            : { workflow_id: parsed.workflow_id },
+          parsed.session_id,
+          bridgeTimeoutMs,
+        ),
+      );
+    },
+
+    async comfy_workflow_list(input: unknown): Promise<BridgeCommandResult> {
+      const parsed = WorkflowListInputSchema.parse(input);
+      return bridge.command(
+        createCanvasCommand(
+          "workflow.list",
           {},
           parsed.session_id,
+          bridgeTimeoutMs,
+        ),
+      );
+    },
+
+    async comfy_workflow_get(input: unknown): Promise<BridgeCommandResult> {
+      const parsed = WorkflowGetInputSchema.parse(input);
+      const { session_id: sessionId, ...payload } = parsed;
+      return bridge.command(
+        createCanvasCommand(
+          "workflow.get",
+          payload,
+          sessionId,
+          bridgeTimeoutMs,
+        ),
+      );
+    },
+
+    async comfy_workflow_select(input: unknown): Promise<BridgeCommandResult> {
+      const parsed = WorkflowSelectInputSchema.parse(input);
+      const { session_id: sessionId, ...payload } = parsed;
+      return bridge.command(
+        createCanvasCommand(
+          "workflow.select",
+          payload,
+          sessionId,
+          bridgeTimeoutMs,
+        ),
+      );
+    },
+
+    async comfy_workflow_create(input: unknown): Promise<BridgeCommandResult> {
+      const parsed = WorkflowCreateInputSchema.parse(input);
+      const { session_id: sessionId, ...payload } = parsed;
+      return bridge.command(
+        createCanvasCommand(
+          "workflow.create",
+          payload,
+          sessionId,
+          bridgeTimeoutMs,
+        ),
+      );
+    },
+
+    async comfy_workflow_save(input: unknown): Promise<BridgeCommandResult> {
+      const parsed = WorkflowSaveInputSchema.parse(input);
+      const { session_id: sessionId, ...payload } = parsed;
+      return bridge.command(
+        createCanvasCommand(
+          "workflow.save",
+          payload,
+          sessionId,
+          bridgeTimeoutMs,
+        ),
+      );
+    },
+
+    async comfy_workflow_rename(input: unknown): Promise<BridgeCommandResult> {
+      const parsed = WorkflowRenameInputSchema.parse(input);
+      const { session_id: sessionId, ...payload } = parsed;
+      return bridge.command(
+        createCanvasCommand(
+          "workflow.rename",
+          payload,
+          sessionId,
+          bridgeTimeoutMs,
+        ),
+      );
+    },
+
+    async comfy_workflow_close(input: unknown): Promise<BridgeCommandResult> {
+      const parsed = WorkflowCloseInputSchema.parse(input);
+      const { session_id: sessionId, ...payload } = parsed;
+      return bridge.command(
+        createCanvasCommand(
+          "workflow.close",
+          payload,
+          sessionId,
+          bridgeTimeoutMs,
+        ),
+      );
+    },
+
+    async comfy_workflow_reorder(input: unknown): Promise<BridgeCommandResult> {
+      const parsed = WorkflowReorderInputSchema.parse(input);
+      const { session_id: sessionId, ...payload } = parsed;
+      return bridge.command(
+        createCanvasCommand(
+          "workflow.reorder",
+          payload,
+          sessionId,
           bridgeTimeoutMs,
         ),
       );
@@ -147,12 +261,29 @@ export function createToolHandlers(dependencies: ToolHandlerDependencies) {
       );
     },
 
+    async comfy_canvas_focus(input: unknown): Promise<BridgeCommandResult> {
+      const parsed = CanvasFocusInputSchema.parse(input);
+      const { session_id: sessionId, ...payload } = parsed;
+      return bridge.command(
+        createCanvasCommand(
+          "canvas.focus",
+          payload,
+          sessionId,
+          bridgeTimeoutMs,
+        ),
+      );
+    },
+
     async comfy_queue_current(input: unknown): Promise<QueuePromptResponse> {
       const parsed = QueueCurrentInputSchema.parse(input);
+      const toPromptPayload =
+        parsed.workflow_id === undefined
+          ? {}
+          : { workflow_id: parsed.workflow_id };
       const bridgeResponse = await bridge.command(
         createCanvasCommand(
           "canvas.to_prompt",
-          {},
+          toPromptPayload,
           parsed.session_id,
           bridgeTimeoutMs,
         ),
