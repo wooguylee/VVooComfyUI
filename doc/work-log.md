@@ -4,7 +4,7 @@
 
 ### 단계 1: 환경 조사와 설계 명세
 
-상태: 작성 완료, 커밋 전
+상태: 완료
 
 확인 결과:
 
@@ -23,3 +23,28 @@
 - 캔버스 변경은 expected revision, snapshot, rollback이 있는 원자적 patch로 수행한다.
 - 초기 버전은 루트 캔버스만 지원한다.
 - Comfy Desktop 재실행이 필요한 설치 직전까지 구현과 정적·단위 검증을 진행한다.
+
+Git 결과:
+
+- 커밋: `8fc2e70 docs: define realtime Comfy canvas MCP design`
+- 푸시: `origin/main` 성공
+- 푸시 후 상태: `main...origin/main`, clean
+
+### 단계 2: 구현 계획
+
+상태: 작성 완료, 커밋 전
+
+계획 범위:
+
+- Task 1: Node.js 프로젝트 기반과 ComfyUI 기본 HTTP 클라이언트
+- Task 2: 캔버스 프로토콜, Python 브리지 클라이언트와 MCP 도구
+- Task 3: Python 세션·WebSocket 명령 브리지
+- Task 4: JavaScript 캔버스 상태와 원자적 patch 엔진
+- Task 5: installer, 전체 검증, custom-node junction 설치와 재실행 경계
+
+자체 검토:
+
+- 설계 명세의 MCP 도구 11개가 모두 구현 계획에 포함됐다.
+- placeholder 표현이 없음을 확인했다.
+- Node/Python/JavaScript 인터페이스와 파일 책임을 대조했다.
+- 각 Task에 RED→GREEN TDD, focused verification, 커밋과 `git push origin main`을 명시했다.
