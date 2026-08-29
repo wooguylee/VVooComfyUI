@@ -83,3 +83,44 @@ GREEN 확인:
 - TypeScript 7은 설치된 `@types/node@20.19.43`을 현재 설정에서 자동 포함하지 않았다.
 - `tsc --showConfig`에 `types`가 없음을 확인한 후 `types: ["node"]`만 추가했다.
 - 수정 후 빌드와 17개 테스트가 모두 통과했다.
+
+Git 결과:
+
+- 커밋: `e158de8 feat: add ComfyUI HTTP client foundation`
+- 푸시: `origin/main` 성공
+- 푸시 후 상태: `main...origin/main`, clean
+
+### 단계 4: Task 2 - 캔버스 프로토콜과 MCP 도구
+
+상태: 구현·검증 완료, 커밋 전
+
+RED 확인:
+
+- `canvas-protocol.test.ts`: `src/canvas-protocol.ts` 모듈 부재로 실패
+- `bridge-client.test.ts`: `src/bridge-client.ts` 모듈 부재로 실패
+- `tool-handlers.test.ts`: `src/tool-handlers.ts` 모듈 부재로 실패
+- `server.test.ts`: `src/server.ts` 모듈 부재로 실패
+
+GREEN 확인:
+
+- 명령: `npm run test:node`
+- 결과: 6 files, 57 tests passed
+- `npm run build`: 성공
+- `node --check dist/index.js`: 성공
+- `git diff --check`: 성공
+
+구현 내용:
+
+- 9개 캔버스 patch operation과 revision·교체·복원 Zod schema
+- 로컬 master token을 사용하는 canvas bridge HTTP client
+- non-2xx 응답에서도 `REVISION_CONFLICT` 같은 bridge 오류 코드 보존
+- 상태·노드·캔버스·patch·교체·복원·실행·queue·interrupt·history 도구 11개
+- `canvas.to_prompt` 결과 검증 후 현재 UI workflow를 `/prompt`로 제출
+- MCP server instructions와 read/write/destructive annotation
+- 프로젝트별 `.codex/config.toml` STDIO 등록
+
+구현 중 확인한 문제:
+
+- Zod 4는 refinement가 붙은 object에 `.omit()`을 허용하지 않는다.
+- MCP 입력과 bridge payload가 공통 shape를 사용하되 각각 schema를 생성하고 중복-ref 검증 함수만 공유하도록 분리했다.
+- 수정 후 protocol을 포함한 57개 테스트가 모두 통과했다.

@@ -1,0 +1,9 @@
+[mcp_servers.vvoo_comfy]
+command = "node"
+args = ["dist/index.js"]
+cwd = "W:\\WorkAI\\VVooComfyUI"
+startup_timeout_sec = 20
+tool_timeout_sec = 60
+enabled = true
+required = false
+default_tools_approval_mode = "writes"
