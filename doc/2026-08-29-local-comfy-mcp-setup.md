@@ -62,7 +62,41 @@ $workspace = 'C:\Users\Administrator\AppData\Local\Comfy-Desktop\ComfyUI-Install
 4. 워크플로 실행 전 `validate_workflow`로 검증한다.
 5. `run_workflow`로 실행한 뒤 `fetch_outputs`로 결과를 원하는 디렉터리에 복사한다.
 
-## 현재 검증 경계
+## 실연결 검증
 
-설치와 프로젝트 설정 검증은 완료 후 작업 로그에 기록한다. 실제 ComfyUI 프로세스와 `server_info()`의 연결 검증은 별도 작업과 커밋으로 기록한다.
+Codex와 동일한 `command`, `cwd`, `COMFY_BIN`, `PYTHONUTF8` 환경으로 공식 MCP Python client를 연결해 다음 순서를 검증했다.
 
+1. stdio MCP 초기화
+2. `tools/list`
+3. 실행 전 `server_info()`
+4. `launch_comfyui()`
+5. 실행 후 `server_info()`
+
+결과:
+
+- MCP server name: `comfy-mcp`
+- 등록 도구: 39개
+- 필수 도구 `server_info`, `launch_comfyui`, `run_workflow`, `fetch_outputs`: 모두 존재
+- 실행 전 상태: `server.running=false`
+- 실행 결과: `127.0.0.1:8188`의 background ComfyUI 시작
+- 실행 후 상태: `server.running=true`, URL `http://127.0.0.1:8188`
+- workspace: 설정한 Comfy Desktop workspace와 일치
+- ComfyUI core: `v0.34.2`, 최신 상태
+- GPU: NVIDIA GeForce RTX 3090, VRAM 24 GiB
+- compatibility warnings: 0개
+- 전체 MCP 검증 프로세스: exit code 0
+- `stop_comfyui()` 성공 후 최종 `server.running=false` 확인
+
+이미지나 워크플로는 실행하지 않았으며, 검증용 ComfyUI 프로세스는 정상 종료했다.
+
+## 확인된 Windows 실행 특성
+
+전용 가상환경을 활성화하지 않은 일반 셸에서 `comfy.exe`를 절대 경로로 직접 호출해 `launch --background`를 실행하면, `comfy-cli`가 내부에서 bare `comfy` 명령을 재호출할 때 `PATH`에서 찾지 못할 수 있다.
+
+공식 `comfy-mcp 0.10.0`은 이 경우를 처리한다. `COMFY_BIN`을 해석한 디렉터리를 자식 프로세스의 `PATH` 앞에 추가한 뒤 `comfy-cli`를 실행하므로, Codex의 MCP 호출에서는 `launch_comfyui()`가 정상 동작한다. 운영 시 수동 `comfy launch` 대신 MCP의 `launch_comfyui`를 사용하거나 가상환경을 활성화한다.
+
+현재 Comfy Desktop workspace에는 이전 작업이 만든 `vvoo_comfy_mcp` custom-node junction이 남아 있어 시작 로그에 해당 legacy node의 import warning이 기록됐다. 이번 새 작업에서는 기존 `dev`와 그 외부 junction을 수정하거나 제거하지 않았다. 공식 `comfy-mcp` 초기화, 39개 도구 등록, `server_info`, HTTP 상태 확인과 lifecycle 검증에는 영향을 주지 않았다.
+
+## Codex 반영
+
+설정 파일과 서버 실행은 검증됐다. 현재 열려 있던 Codex 작업의 도구 목록은 시작 시점에 정해지므로, 실제 대화에서 `comfy_mcp` 도구를 사용하려면 이 프로젝트를 새 작업으로 열거나 MCP 서버를 재시작한다.
