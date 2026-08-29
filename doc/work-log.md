@@ -124,3 +124,39 @@ GREEN 확인:
 - Zod 4는 refinement가 붙은 object에 `.omit()`을 허용하지 않는다.
 - MCP 입력과 bridge payload가 공통 shape를 사용하되 각각 schema를 생성하고 중복-ref 검증 함수만 공유하도록 분리했다.
 - 수정 후 protocol을 포함한 57개 테스트가 모두 통과했다.
+
+Git 결과:
+
+- 커밋: `c9f1dae feat: expose Comfy canvas MCP tools`
+- 푸시: `origin/main` 성공
+- 푸시 후 상태: `main...origin/main`, clean
+
+### 단계 5: Task 3 - ComfyUI Python command bridge
+
+상태: 구현·검증 완료, 커밋 전
+
+RED 확인:
+
+- `test_bridge_state.py`: `bridge_state` 모듈 부재로 실패
+- pending 전송 실패 정리 테스트: `cancel_pending` 메서드 부재로 실패
+- `test_routes.py`: ComfyUI 확장 `__init__.py` 부재로 route 테스트 4개 실패
+
+GREEN 확인:
+
+- 명령: `python -m unittest discover -s tests/python -v`
+- 결과: 18 tests passed
+- 시스템 Python `compileall`: 성공
+- ComfyUI 번들 Python 3.13 `compileall`: 성공
+- `git diff --check`: 성공
+
+구현 내용:
+
+- 실제 Comfy WebSocket이 존재하는 `client_id`만 등록
+- protocol version 검증과 session token 발급
+- focus·visibility·heartbeat 기반 활성 세션 선택과 모호성 거절
+- session별 pending Future, timeout·전송 실패·연결 종료 정리
+- master Bearer token과 frontend session token 분리
+- `/vvoo_mcp/frontend/register`, `/heartbeat`, `/result` route
+- `/vvoo_mcp/sessions`, `/status`, `/command` route
+- `vvoo.mcp.command` 메시지를 선택된 WebSocket `sid`에만 전송
+- 실제 ComfyUI 노드를 추가하지 않는 `WEB_DIRECTORY` 전용 확장
