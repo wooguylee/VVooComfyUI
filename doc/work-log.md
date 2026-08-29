@@ -57,7 +57,7 @@ Git 결과:
 
 ### 단계 3: Task 1 - Node.js 기반과 ComfyUI HTTP 클라이언트
 
-상태: 구현·검증 완료, 커밋 전
+상태: 구현·검증·커밋·푸시 완료
 
 RED 확인:
 
@@ -92,7 +92,7 @@ Git 결과:
 
 ### 단계 4: Task 2 - 캔버스 프로토콜과 MCP 도구
 
-상태: 구현·검증 완료, 커밋 전
+상태: 구현·검증·커밋·푸시 완료
 
 RED 확인:
 
@@ -133,7 +133,7 @@ Git 결과:
 
 ### 단계 5: Task 3 - ComfyUI Python command bridge
 
-상태: 구현·검증 완료, 커밋 전
+상태: 구현·검증·커밋·푸시 완료
 
 RED 확인:
 
@@ -160,3 +160,41 @@ GREEN 확인:
 - `/vvoo_mcp/sessions`, `/status`, `/command` route
 - `vvoo.mcp.command` 메시지를 선택된 WebSocket `sid`에만 전송
 - 실제 ComfyUI 노드를 추가하지 않는 `WEB_DIRECTORY` 전용 확장
+
+Git 결과:
+
+- 커밋: `63c916a feat: add authenticated ComfyUI command bridge`
+- 푸시: `origin/main` 성공
+- 푸시 후 상태: `main...origin/main`, clean
+
+### 단계 6: Task 4 - 실시간 캔버스 상태·원자적 patch 엔진
+
+상태: 구현·검증 완료, 커밋 전
+
+RED 확인:
+
+- `graph-state.test.js`: `graph-state.js` 모듈 부재로 실패
+- `patch-engine.test.js`: `patch-engine.js` 모듈 부재로 실패
+- `canvas-runtime.test.js`: `canvas-runtime.js` 모듈 부재로 실패
+
+GREEN 확인:
+
+- 명령: `npm run test:js`
+- 결과: 3 files, 25 tests passed
+- JavaScript 4개 파일 `node --check`: 성공
+- `npm run build`: 성공
+- `git diff --check`: 성공
+
+구현 내용:
+
+- 정규 JSON과 SHA-256 기반 canvas revision
+- 최근 10개의 인메모리 workflow snapshot
+- 루트 캔버스 workflow·노드·링크·위젯 요약 조회
+- 노드 추가·삭제·이동·크기·제목·속성·위젯 변경
+- 임시 ref 또는 실제 ID와 슬롯 이름·번호를 이용한 연결·해제
+- revision 충돌, 대량 삭제 확인, 루트 캔버스 제한
+- patch·전체 교체·snapshot 복원 전 자동 백업
+- 작업 실패 시 원래 workflow 전체 롤백과 안정된 오류 코드
+- `canvas.get`, `apply_patch`, `replace`, `restore`, `to_prompt` 명령 디스패치
+- WebSocket client ID 등록, 5초 heartbeat, focus·visibility 활성 세션 메타데이터
+- 프런트엔드 명령 직렬화와 session token 기반 결과 반환

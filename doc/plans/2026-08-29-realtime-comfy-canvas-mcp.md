@@ -463,10 +463,12 @@ git push origin main
 
 - Create: `comfy-extension/vvoo_comfy_mcp/js/graph-state.js`
 - Create: `comfy-extension/vvoo_comfy_mcp/js/patch-engine.js`
+- Create: `comfy-extension/vvoo_comfy_mcp/js/canvas-runtime.js`
 - Create: `comfy-extension/vvoo_comfy_mcp/js/canvas-bridge.js`
 - Create: `tests/js/fake-graph.js`
 - Create: `tests/js/graph-state.test.js`
 - Create: `tests/js/patch-engine.test.js`
+- Create: `tests/js/canvas-runtime.test.js`
 - Modify: `doc/work-log.md`
 
 **Interfaces:**
@@ -477,8 +479,9 @@ git push origin main
 - Produces: `getCanvasState(app): Promise<CanvasState>`
 - Produces: `applyPatchTransaction(context, request): Promise<PatchResult>`
 - Produces: `replaceWorkflowTransaction` and `restoreSnapshotTransaction`.
+- Produces: `dispatchCanvasCommand(context, command, payload)` and stable error serialization.
 
-- [ ] **Step 1: Build the fake graph and failing graph-state tests**
+- [x] **Step 1: Build the fake graph and failing graph-state tests**
 
 The fake implements `serialize`, `getNodeById`, `add`, `remove`, node `connect`, `disconnectInput`, widgets, `setDirtyCanvas`, and a configurable `LiteGraph.createNode` registry.
 
@@ -490,17 +493,17 @@ Graph-state tests assert:
 - node/link/widget summary is stable;
 - snapshot IDs are unique and only the newest 10 remain.
 
-- [ ] **Step 2: Run graph-state tests and confirm RED**
+- [x] **Step 2: Run graph-state tests and confirm RED**
 
 Run: `npm run test:js -- tests/js/graph-state.test.js`
 
 Expected: FAIL because graph-state exports do not exist.
 
-- [ ] **Step 3: Implement canonical hashing and snapshots**
+- [x] **Step 3: Implement canonical hashing and snapshots**
 
 Recursively sort object keys, preserve arrays, serialize finite JSON values, and hash UTF-8 bytes with `crypto.subtle.digest("SHA-256", ...)`. Return root workflow plus summary and revision.
 
-- [ ] **Step 4: Write failing patch-engine tests**
+- [x] **Step 4: Write failing patch-engine tests**
 
 Add one test for every operation plus these transaction cases:
 
@@ -520,13 +523,13 @@ await expect(applyPatchTransaction(ctx, {
 - replacement requires confirmation and rolls back on load failure;
 - restore requires current revision and a known backup ID.
 
-- [ ] **Step 5: Run patch-engine tests and confirm RED**
+- [x] **Step 5: Run patch-engine tests and confirm RED**
 
 Run: `npm run test:js -- tests/js/patch-engine.test.js`
 
 Expected: FAIL because patch operations are not implemented.
 
-- [ ] **Step 6: Implement patch transactions**
+- [x] **Step 6: Implement patch transactions**
 
 Resolve node references through this helper contract:
 
@@ -541,13 +544,13 @@ function resolveNode(graph, refMap, reference) {
 
 Use `LiteGraph.createNode(type)`, then graph `add`. Set widget values only after the node is added. Validate output/input slots by index or name before calling `connect`. Save the original workflow before the first mutation and call `await app.loadGraphData(original)` on any failure.
 
-- [ ] **Step 7: Run graph tests and confirm GREEN**
+- [x] **Step 7: Run graph tests and confirm GREEN**
 
 Run: `npm run test:js`
 
 Expected: every graph-state and patch-engine test passes.
 
-- [ ] **Step 8: Implement the ComfyUI frontend adapter**
+- [x] **Step 8: Implement the ComfyUI frontend adapter**
 
 Import:
 
@@ -567,7 +570,9 @@ api.addEventListener("vvoo.mcp.command", async ({ detail }) => {
 
 Dispatch `canvas.get`, `canvas.apply_patch`, `canvas.replace`, `canvas.restore`, and `canvas.to_prompt`. For `canvas.to_prompt`, return the exact `{ output, workflow }` from `await app.graphToPrompt()`.
 
-- [ ] **Step 9: Verify Task 4**
+The command dispatcher and error serializer live in `canvas-runtime.js` so their browser-independent behavior can be verified before the thin ComfyUI adapter is loaded.
+
+- [x] **Step 9: Verify Task 4**
 
 Run:
 
@@ -575,6 +580,7 @@ Run:
 npm run test:js
 node --check comfy-extension/vvoo_comfy_mcp/js/graph-state.js
 node --check comfy-extension/vvoo_comfy_mcp/js/patch-engine.js
+node --check comfy-extension/vvoo_comfy_mcp/js/canvas-runtime.js
 node --check comfy-extension/vvoo_comfy_mcp/js/canvas-bridge.js
 npm run build
 git diff --check

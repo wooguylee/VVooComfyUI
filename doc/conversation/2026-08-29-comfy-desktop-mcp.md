@@ -188,3 +188,19 @@ ComfyUI 프런트엔드 확장
 - 각 단계는 커밋 후 즉시 `origin`에 푸시한다.
 - 승인된 권장 설계에 따라 구현을 계속한다.
 - ComfyUI 확장을 설치한 뒤 Comfy Desktop 재실행이 필요한 시점에서 멈추고 사용자에게 재실행을 요청한다.
+
+## 9. 재실행 전 구현 진행 기록
+
+### Assistant 진행
+
+권장 설계에 따라 다음을 단계별로 구현하고 각 완료 단계마다 커밋·푸시했다.
+
+- Node.js loopback HTTP client와 로컬 설정
+- 11개 MCP 도구, canvas protocol schema와 MCP STDIO 서버
+- master token과 frontend session token을 분리한 ComfyUI Python bridge
+- 현재 workflow revision과 snapshot 저장소
+- 노드 생성·연결·프롬프트/widget 설정을 포함한 원자적 patch transaction
+- 전체 workflow 교체와 snapshot 복원, 실패 시 전체 롤백
+- 활성 ComfyUI 탭 등록·heartbeat·명령 처리를 수행하는 frontend JavaScript adapter
+
+Task 4 검증 시 JavaScript 테스트 25개, 구문 검사, TypeScript build가 통과했다. 아직 실행 중인 Comfy Desktop에는 확장을 설치하지 않았으므로 현재 캔버스는 변경하지 않았다.
