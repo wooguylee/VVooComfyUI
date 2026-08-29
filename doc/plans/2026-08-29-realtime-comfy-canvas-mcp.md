@@ -89,7 +89,7 @@
 - Produces: `ComfyHttpClient.requestJson<T>(path, init?): Promise<T>`
 - Produces: `ComfyHttpClient.getSystemStats()`, `getQueue()`, `getObjectInfo()`, `getHistory()`, `interrupt()`, and `queuePrompt()`.
 
-- [ ] **Step 1: Add package and compiler configuration**
+- [x] **Step 1: Add package and compiler configuration**
 
 Use ESM and pin the verified package versions:
 
@@ -119,7 +119,7 @@ Use ESM and pin the verified package versions:
 
 Run `npm install` to create `package-lock.json`.
 
-- [ ] **Step 2: Write failing configuration tests**
+- [x] **Step 2: Write failing configuration tests**
 
 Cover default URL, explicit loopback URL, non-loopback rejection, default token path, and integer timeout parsing:
 
@@ -130,13 +130,13 @@ expect(() => loadConfig({ COMFY_BASE_URL: "https://example.com" }))
   .toThrow(/loopback/i);
 ```
 
-- [ ] **Step 3: Run configuration tests and confirm RED**
+- [x] **Step 3: Run configuration tests and confirm RED**
 
 Run: `npm run test:node -- tests/node/config.test.ts`
 
 Expected: FAIL because `src/config.ts` does not exist.
 
-- [ ] **Step 4: Implement structured errors and configuration**
+- [x] **Step 4: Implement structured errors and configuration**
 
 Define:
 
@@ -159,13 +159,13 @@ export class ComfyMcpError extends Error {
 
 Resolve the token path with `path.join(LOCALAPPDATA, "VVooComfyUI", "bridge-token")`. Reject credentials, non-HTTP schemes, query strings, fragments, and hostnames other than `127.0.0.1` and `localhost`.
 
-- [ ] **Step 5: Run configuration tests and confirm GREEN**
+- [x] **Step 5: Run configuration tests and confirm GREEN**
 
 Run: `npm run test:node -- tests/node/config.test.ts`
 
 Expected: all configuration tests pass.
 
-- [ ] **Step 6: Write failing HTTP client tests**
+- [x] **Step 6: Write failing HTTP client tests**
 
 Start a temporary `node:http` server on `127.0.0.1` and verify JSON parsing, non-2xx error bodies, invalid JSON, request timeout, prompt submission payload, and interrupt POST.
 
@@ -179,17 +179,17 @@ await expect(client.requestJson("/slow")).rejects.toMatchObject({
 });
 ```
 
-- [ ] **Step 7: Run HTTP client tests and confirm RED**
+- [x] **Step 7: Run HTTP client tests and confirm RED**
 
 Run: `npm run test:node -- tests/node/comfy-http-client.test.ts`
 
 Expected: FAIL because `ComfyHttpClient` does not exist.
 
-- [ ] **Step 8: Implement the minimal ComfyUI HTTP client**
+- [x] **Step 8: Implement the minimal ComfyUI HTTP client**
 
 Use built-in `fetch` and `AbortSignal.timeout`. Convert network errors to `COMFY_UNAVAILABLE`, aborts to `COMFY_TIMEOUT`, and non-2xx responses to `COMFY_HTTP_ERROR`. Expose exact built-in API methods required by later tool handlers.
 
-- [ ] **Step 9: Verify Task 1**
+- [x] **Step 9: Verify Task 1**
 
 Run:
 
@@ -201,7 +201,7 @@ git diff --check
 
 Expected: tests and TypeScript build pass; diff check is clean.
 
-- [ ] **Step 10: Record, commit, and push Task 1**
+- [x] **Step 10: Record, commit, and push Task 1**
 
 Update `doc/work-log.md` with commands and results, then run:
 
@@ -237,7 +237,7 @@ git push origin main
 - Produces: `createToolHandlers(deps): ToolHandlers`.
 - Produces: `createMcpServer(deps): McpServer`.
 
-- [ ] **Step 1: Write failing protocol tests**
+- [x] **Step 1: Write failing protocol tests**
 
 Validate every operation discriminator and safety rule. The transaction schema has this shape:
 
@@ -252,17 +252,17 @@ const ApplyPatchInputSchema = z.object({
 
 Test duplicate `add_node.ref`, invalid positions, empty operations, missing replacement confirmation, and malformed 64-character revisions.
 
-- [ ] **Step 2: Run protocol tests and confirm RED**
+- [x] **Step 2: Run protocol tests and confirm RED**
 
 Run: `npm run test:node -- tests/node/canvas-protocol.test.ts`
 
 Expected: FAIL because protocol schemas do not exist.
 
-- [ ] **Step 3: Implement Zod protocol schemas**
+- [x] **Step 3: Implement Zod protocol schemas**
 
 Define discriminated unions for `add_node`, `remove_node`, `move_node`, `resize_node`, `set_widget`, `set_title`, `set_properties`, `connect`, and `disconnect`. A node reference accepts either `{ "id": number|string }` or `{ "ref": string }`; slots accept a non-negative index or a non-empty name.
 
-- [ ] **Step 4: Write failing bridge client tests**
+- [x] **Step 4: Write failing bridge client tests**
 
 Use a temporary HTTP server and a temporary token file. Assert `Authorization: Bearer <token>`, JSON bodies, session parsing, error-code preservation, and timeouts.
 
@@ -271,17 +271,17 @@ await expect(client.command({ command: "canvas.get", payload: {} }))
   .resolves.toMatchObject({ ok: true });
 ```
 
-- [ ] **Step 5: Run bridge tests and confirm RED**
+- [x] **Step 5: Run bridge tests and confirm RED**
 
 Run: `npm run test:node -- tests/node/bridge-client.test.ts`
 
 Expected: FAIL because `BridgeClient` does not exist.
 
-- [ ] **Step 6: Implement `BridgeClient`**
+- [x] **Step 6: Implement `BridgeClient`**
 
 Read and trim the master token for every MCP process start. Reject an absent or empty token as `BRIDGE_TOKEN_MISSING`. Call `/vvoo_mcp/sessions` and `/vvoo_mcp/command`, forwarding a selected session and command timeout.
 
-- [ ] **Step 7: Write failing tool-handler tests**
+- [x] **Step 7: Write failing tool-handler tests**
 
 Inject fake HTTP and bridge clients. Test every handler without MCP transport:
 
@@ -298,7 +298,7 @@ expect(bridge.command).toHaveBeenCalledWith(expect.objectContaining({
 
 Verify `comfy_queue_current` first requests `canvas.to_prompt` and then submits `/prompt` with the selected `client_id`, API prompt, and workflow metadata.
 
-- [ ] **Step 8: Implement all tool handlers**
+- [x] **Step 8: Implement all tool handlers**
 
 Implement the tools from the spec exactly:
 
@@ -316,17 +316,17 @@ Implement the tools from the spec exactly:
 
 Return JSON-serializable objects and preserve structured error codes.
 
-- [ ] **Step 9: Write failing MCP server tests**
+- [x] **Step 9: Write failing MCP server tests**
 
 Create an SDK in-memory client/server transport pair. Assert the tool list, read-only/destructive annotations, and one read call plus one patch call.
 
-- [ ] **Step 10: Register tools and STDIO entry point**
+- [x] **Step 10: Register tools and STDIO entry point**
 
 Use `McpServer` and `StdioServerTransport`. Provide server instructions whose first 512 characters state that callers must read the canvas first, pass its revision to writes, and never guess a session when more than one is active.
 
 Register read tools with `readOnlyHint: true`; canvas writes and interrupt use `readOnlyHint: false`. Mark replacement and interrupt as destructive.
 
-- [ ] **Step 11: Add project MCP configuration**
+- [x] **Step 11: Add project MCP configuration**
 
 Create:
 
@@ -342,7 +342,7 @@ required = false
 default_tools_approval_mode = "writes"
 ```
 
-- [ ] **Step 12: Verify Task 2**
+- [x] **Step 12: Verify Task 2**
 
 Run:
 
@@ -355,7 +355,7 @@ git diff --check
 
 Expected: all Node/MCP tests pass, build succeeds, and the entry point parses.
 
-- [ ] **Step 13: Record, commit, and push Task 2**
+- [x] **Step 13: Record, commit, and push Task 2**
 
 ```powershell
 git add src tests/node .codex package.json package-lock.json doc/work-log.md
@@ -380,7 +380,7 @@ git push origin main
 - Produces HTTP routes `/vvoo_mcp/frontend/register`, `/frontend/heartbeat`, `/frontend/result`, `/sessions`, `/status`, and `/command`.
 - Sends ComfyUI event type `vvoo.mcp.command` with protocol version `1`.
 
-- [ ] **Step 1: Write failing Python state tests**
+- [x] **Step 1: Write failing Python state tests**
 
 Use `unittest.IsolatedAsyncioTestCase`. Cover:
 
@@ -393,25 +393,25 @@ async def test_selects_focused_visible_recent_session(self):
 
 Also test nonexistent socket rejection, invalid session token, ambiguous active sessions, heartbeat expiry, pending result resolution, wrong-session response rejection, timeout cleanup, and session-drop failure.
 
-- [ ] **Step 2: Run Python tests and confirm RED**
+- [x] **Step 2: Run Python tests and confirm RED**
 
 Run: `python -m unittest discover -s tests/python -v`
 
 Expected: FAIL because `bridge_state.py` does not exist.
 
-- [ ] **Step 3: Implement the Python bridge state**
+- [x] **Step 3: Implement the Python bridge state**
 
 Use standard-library dataclasses, `asyncio`, `secrets`, `time.monotonic`, and `uuid`. Define `BridgeError(code, message, status=400, details=None)` and serialize errors without stack traces.
 
 The state object must never hold an expired session or a completed pending Future. Session selection returns `AMBIGUOUS_CANVAS_SESSION` when the top candidates have identical focus, visibility, and activity values.
 
-- [ ] **Step 4: Run Python tests and confirm GREEN**
+- [x] **Step 4: Run Python tests and confirm GREEN**
 
 Run: `python -m unittest discover -s tests/python -v`
 
 Expected: all bridge-state tests pass.
 
-- [ ] **Step 5: Add ComfyUI route registration**
+- [x] **Step 5: Add ComfyUI route registration**
 
 In `__init__.py`:
 
@@ -435,7 +435,7 @@ await PromptServer.instance.send(
 
 and waits with the requested bounded timeout.
 
-- [ ] **Step 6: Perform Python static verification**
+- [x] **Step 6: Perform Python static verification**
 
 Run:
 
@@ -447,7 +447,7 @@ git diff --check
 
 Expected: tests pass and every Python file compiles.
 
-- [ ] **Step 7: Record, commit, and push Task 3**
+- [x] **Step 7: Record, commit, and push Task 3**
 
 ```powershell
 git add comfy-extension tests/python doc/work-log.md
@@ -586,7 +586,7 @@ npm run build
 git diff --check
 ```
 
-- [ ] **Step 10: Record, commit, and push Task 4**
+- [x] **Step 10: Record, commit, and push Task 4**
 
 ```powershell
 git add comfy-extension tests/js doc/work-log.md
@@ -647,7 +647,7 @@ git status --short
 
 Expected: all Node, JavaScript, and Python tests pass; TypeScript builds; only intended files are changed.
 
-- [ ] **Step 4: Commit and push installer and documentation**
+- [x] **Step 4: Commit and push installer and documentation**
 
 ```powershell
 git add scripts README.md doc
@@ -655,7 +655,7 @@ git commit -m "docs: add Comfy extension installation workflow"
 git push origin main
 ```
 
-- [ ] **Step 5: Preview installation without changing ComfyUI**
+- [x] **Step 5: Preview installation without changing ComfyUI**
 
 Run:
 
@@ -665,7 +665,7 @@ pwsh -File scripts/install-comfy-extension.ps1 -WhatIf
 
 Verify that the source and destination are exact and remain inside the named project and ComfyUI `custom_nodes` directory.
 
-- [ ] **Step 6: Install the extension and token**
+- [x] **Step 6: Install the extension and token**
 
 Run:
 
@@ -675,7 +675,7 @@ pwsh -File scripts/install-comfy-extension.ps1
 
 Do not stop or restart Comfy Desktop.
 
-- [ ] **Step 7: Verify the installed pre-restart state**
+- [x] **Step 7: Verify the installed pre-restart state**
 
 Read-only checks:
 
@@ -685,7 +685,7 @@ Read-only checks:
 - current ComfyUI still responds on `/system_stats`;
 - `/vvoo_mcp/status` remains unavailable before restart, proving the running process has not loaded the new extension.
 
-- [ ] **Step 8: Record installation evidence, commit, and push**
+- [x] **Step 8: Record installation evidence, commit, and push**
 
 Append paths, non-secret validation, response codes, tests, and `RestartRequired: true` to `doc/work-log.md`, append the current turn outcome to the conversation record, then run:
 
@@ -696,6 +696,6 @@ git push origin main
 git status --short --branch
 ```
 
-- [ ] **Step 9: Stop at the user restart boundary**
+- [x] **Step 9: Stop at the user restart boundary**
 
 Report the final commit, pushed branch, installed junction, passed verification, and exact next action: restart Comfy Desktop and tell Codex when the local ComfyUI instance is open again. Do not perform live canvas writes until that response.

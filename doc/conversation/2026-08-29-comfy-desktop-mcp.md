@@ -210,3 +210,17 @@ Task 4 검증 시 JavaScript 테스트 25개, 구문 검사, TypeScript build가
 Comfy Desktop 설치 기록에서 로컬 ComfyUI root를 자동 감지하고, 프로젝트 확장 source를 `custom_nodes`에 junction으로 연결하는 멱등 설치기를 작성했다. 설치기는 다른 기존 대상을 덮어쓰지 않으며 로컬 master token 값을 출력하지 않는다.
 
 `-WhatIf`으로 실제 source·destination·token 경로를 확인했고 외부 파일이 생성되지 않은 상태에서 전체 저장소 검증을 실행했다. Vitest 82개와 Python 18개 테스트, TypeScript build가 모두 통과했다. 이 설치기와 운영 문서를 먼저 커밋·푸시한 뒤 실제 설치를 수행하고, 실행 중인 Comfy Desktop을 건드리지 않은 채 재실행 요청 지점에서 멈추기로 했다.
+
+### Assistant 재실행 직전 결과
+
+설치기·운영 문서를 `9f065ef`로 커밋해 `origin/main`에 푸시한 뒤 설치기를 실행했다.
+
+- 로컬 master token 생성 완료. 값은 표시하지 않았고 64자리 소문자 hex 형식만 확인했다.
+- ComfyUI `custom_nodes\vvoo_comfy_mcp` junction이 프로젝트 extension source를 정확히 가리킨다.
+- 설치기를 다시 실행했을 때 token과 junction을 모두 재사용해 멱등성을 확인했다.
+- ComfyUI 번들 Python으로 확장 파일 compileall이 성공했다.
+- 기존 ComfyUI `/api/system_stats`는 HTTP 200을 유지했다.
+- 새 `/api/vvoo_mcp/status`는 HTTP 404여서 실행 중인 Comfy Desktop이 아직 확장을 로드하지 않았음을 확인했다.
+- ComfyUI 프로세스 시작 시각도 변하지 않아 설치 과정에서 재실행하지 않았다.
+
+사용자가 Comfy Desktop을 완전히 재실행하기 전까지 진행하라는 범위가 완료됐으므로 여기서 멈춘다. 재실행 후에는 bridge status와 frontend session을 확인하고, 현재 workflow snapshot을 확보한 다음 안전한 live canvas 읽기·쓰기 통합 검증을 계속한다.

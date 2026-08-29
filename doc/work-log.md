@@ -207,7 +207,7 @@ Git 결과:
 
 ### 단계 7: Task 5 - 설치기·운영 문서와 설치 전 전체 검증
 
-상태: 구현·검증 완료, 커밋 전
+상태: 구현·검증·커밋·푸시 완료
 
 설치기 구현:
 
@@ -232,3 +232,36 @@ Git 결과:
 
 - root `README.md`에 빠른 설치·도구·안전 순서·제한 기록
 - `doc/setup-and-operations.md`에 전체 설치·운영·복원·오류 대응 기록
+
+Git 결과:
+
+- 커밋: `9f065ef docs: add Comfy extension installation workflow`
+- 푸시: `origin/main` 성공
+- 푸시 후 상태: `main...origin/main`, clean
+
+### 단계 8: 확장 설치와 Comfy Desktop 재실행 직전 검증
+
+상태: 설치·검증 완료, 사용자 재실행 대기
+
+설치 결과:
+
+- 프로젝트 source: `W:\WorkAI\VVooComfyUI\comfy-extension\vvoo_comfy_mcp`
+- ComfyUI root: `C:\Users\Administrator\AppData\Local\Comfy-Desktop\ComfyUI-Installs\ComfyUI\ComfyUI`
+- junction: `C:\Users\Administrator\AppData\Local\Comfy-Desktop\ComfyUI-Installs\ComfyUI\ComfyUI\custom_nodes\vvoo_comfy_mcp`
+- token path: `C:\Users\Administrator\AppData\Local\VVooComfyUI\bridge-token`
+- 최초 실행 결과: `TokenState=created`, `JunctionState=created`, `RestartRequired=True`
+- 재실행 결과: `TokenState=already-present`, `JunctionState=already-installed`로 멱등성 확인
+
+비밀값을 출력하지 않은 검증:
+
+- token 파일 존재: 참
+- token 길이: 64
+- token 형식: `^[a-f0-9]{64}$` 일치
+- link type: `Junction`
+- junction target이 프로젝트 source와 대소문자 무시 완전 일치
+- ComfyUI 번들 Python compileall exit code: 0
+- `GET http://127.0.0.1:8188/api/system_stats`: HTTP 200
+- 인증된 `GET http://127.0.0.1:8188/api/vvoo_mcp/status`: HTTP 404
+- 실행 중 ComfyUI Python process 생성 시각은 모두 `2026-08-29 17:53:16`으로 유지돼 설치 중 재실행하지 않았음
+
+404는 현재 프로세스가 새 custom extension을 아직 import하지 않았다는 예상 결과다. 다음 단계는 사용자가 Comfy Desktop을 완전히 재실행하는 것이며, 그 전에는 live canvas write를 수행하지 않는다.
