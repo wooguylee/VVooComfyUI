@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.vitest/

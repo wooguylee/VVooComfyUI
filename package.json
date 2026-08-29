@@ -1,0 +1,29 @@
+{
+  "name": "vvoo-comfyui-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local MCP bridge for Comfy Desktop and the active ComfyUI canvas",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:node": "vitest run tests/node",
+    "test:js": "vitest run tests/js",
+    "test:python": "python -m unittest discover -s tests/python -v",
+    "verify": "npm run test && npm run test:python && npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "4.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "20.x",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
+  }
+}

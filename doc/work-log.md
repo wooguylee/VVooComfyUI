@@ -32,7 +32,7 @@ Git 결과:
 
 ### 단계 2: 구현 계획
 
-상태: 작성 완료, 커밋 전
+상태: 완료
 
 계획 범위:
 
@@ -48,3 +48,38 @@ Git 결과:
 - placeholder 표현이 없음을 확인했다.
 - Node/Python/JavaScript 인터페이스와 파일 책임을 대조했다.
 - 각 Task에 RED→GREEN TDD, focused verification, 커밋과 `git push origin main`을 명시했다.
+
+Git 결과:
+
+- 커밋: `2821d88 docs: add realtime Comfy MCP implementation plan`
+- 푸시: `origin/main` 성공
+- 푸시 후 상태: `main...origin/main`, clean
+
+### 단계 3: Task 1 - Node.js 기반과 ComfyUI HTTP 클라이언트
+
+상태: 구현·검증 완료, 커밋 전
+
+RED 확인:
+
+- 명령: `npm run test:node -- tests/node/config.test.ts tests/node/comfy-http-client.test.ts`
+- 결과: 두 테스트 파일 모두 `src/config.ts`, `src/comfy-http-client.ts` 모듈 부재로 실패
+
+GREEN 확인:
+
+- 설정·HTTP 테스트: 2 files, 17 tests passed
+- TypeScript build: 성공
+- `git diff --check`: 성공
+
+구현 내용:
+
+- 외부 호스트·HTTPS·credentials·경로·query·fragment를 거절하는 loopback URL 검증
+- `%LOCALAPPDATA%\VVooComfyUI\bridge-token` 기본 경로와 timeout 설정
+- `ComfyMcpError` 구조화 오류
+- ComfyUI JSON 요청, HTTP 오류, JSON 오류, timeout과 연결 오류 처리
+- system stats, queue, object info, history, prompt 제출과 interrupt API
+
+빌드 중 확인한 문제:
+
+- TypeScript 7은 설치된 `@types/node@20.19.43`을 현재 설정에서 자동 포함하지 않았다.
+- `tsc --showConfig`에 `types`가 없음을 확인한 후 `types: ["node"]`만 추가했다.
+- 수정 후 빌드와 17개 테스트가 모두 통과했다.
