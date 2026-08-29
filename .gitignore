@@ -1,0 +1,4 @@
+.venv-comfy-mcp/
+__pycache__/
+*.py[cod]
+
