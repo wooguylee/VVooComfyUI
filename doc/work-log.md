@@ -169,7 +169,7 @@ Git 결과:
 
 ### 단계 6: Task 4 - 실시간 캔버스 상태·원자적 patch 엔진
 
-상태: 구현·검증 완료, 커밋 전
+상태: 구현·검증·커밋·푸시 완료
 
 RED 확인:
 
@@ -198,3 +198,37 @@ GREEN 확인:
 - `canvas.get`, `apply_patch`, `replace`, `restore`, `to_prompt` 명령 디스패치
 - WebSocket client ID 등록, 5초 heartbeat, focus·visibility 활성 세션 메타데이터
 - 프런트엔드 명령 직렬화와 session token 기반 결과 반환
+
+Git 결과:
+
+- 커밋: `63748cf feat: add atomic live canvas patch engine`
+- 푸시: `origin/main` 성공
+- 푸시 후 상태: `main...origin/main`, clean
+
+### 단계 7: Task 5 - 설치기·운영 문서와 설치 전 전체 검증
+
+상태: 구현·검증 완료, 커밋 전
+
+설치기 구현:
+
+- `%APPDATA%\Comfy Desktop\installations.json`에서 설치 완료된 non-cloud `ComfyUI` 하나만 선택
+- 명시적 `-ComfyRoot`는 `custom_nodes` 포함 여부 검증
+- 프로젝트 확장 source와 `custom_nodes\vvoo_comfy_mcp` destination 정규화·범위 검증
+- 기존 대상이 같은 junction일 때만 멱등 허용하고, 일반 디렉터리·다른 target은 변경 전에 실패
+- 32-byte 암호학적 난수로 64자리 소문자 hex token 생성
+- `-ForceTokenRotation`, `-WhatIf`, `SupportsShouldProcess` 지원
+- secret 값을 출력하지 않고 경로·상태·`RestartRequired`만 반환
+
+설치 전 검증:
+
+- `-WhatIf` source: `W:\WorkAI\VVooComfyUI\comfy-extension\vvoo_comfy_mcp`
+- `-WhatIf` destination: `C:\Users\Administrator\AppData\Local\Comfy-Desktop\ComfyUI-Installs\ComfyUI\ComfyUI\custom_nodes\vvoo_comfy_mcp`
+- `-WhatIf` token: `C:\Users\Administrator\AppData\Local\VVooComfyUI\bridge-token`
+- preview 후 token과 destination이 생성되지 않음을 확인
+- `npm run verify`: Vitest 9 files, 82 tests passed; Python 18 tests passed; TypeScript build 성공
+- `git diff --check`: 성공
+
+문서:
+
+- root `README.md`에 빠른 설치·도구·안전 순서·제한 기록
+- `doc/setup-and-operations.md`에 전체 설치·운영·복원·오류 대응 기록

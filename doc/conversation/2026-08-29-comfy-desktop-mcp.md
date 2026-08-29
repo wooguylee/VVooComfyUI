@@ -204,3 +204,9 @@ ComfyUI 프런트엔드 확장
 - 활성 ComfyUI 탭 등록·heartbeat·명령 처리를 수행하는 frontend JavaScript adapter
 
 Task 4 검증 시 JavaScript 테스트 25개, 구문 검사, TypeScript build가 통과했다. 아직 실행 중인 Comfy Desktop에는 확장을 설치하지 않았으므로 현재 캔버스는 변경하지 않았다.
+
+### Assistant 설치 준비
+
+Comfy Desktop 설치 기록에서 로컬 ComfyUI root를 자동 감지하고, 프로젝트 확장 source를 `custom_nodes`에 junction으로 연결하는 멱등 설치기를 작성했다. 설치기는 다른 기존 대상을 덮어쓰지 않으며 로컬 master token 값을 출력하지 않는다.
+
+`-WhatIf`으로 실제 source·destination·token 경로를 확인했고 외부 파일이 생성되지 않은 상태에서 전체 저장소 검증을 실행했다. Vitest 82개와 Python 18개 테스트, TypeScript build가 모두 통과했다. 이 설치기와 운영 문서를 먼저 커밋·푸시한 뒤 실제 설치를 수행하고, 실행 중인 Comfy Desktop을 건드리지 않은 채 재실행 요청 지점에서 멈추기로 했다.

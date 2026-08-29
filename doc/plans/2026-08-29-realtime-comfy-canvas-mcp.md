@@ -611,7 +611,7 @@ git push origin main
 - Installer parameters: `-ComfyRoot`, `-ForceTokenRotation`, and `-WhatIf` through `SupportsShouldProcess`.
 - Installer output: resolved source, destination, token path, junction state, and `RestartRequired: true|false`.
 
-- [ ] **Step 1: Implement an idempotent installer**
+- [x] **Step 1: Implement an idempotent installer**
 
 Read `%APPDATA%\Comfy Desktop\installations.json`, choose the installed non-cloud record whose name is `ComfyUI`, and resolve `<installPath>\ComfyUI\custom_nodes`.
 
@@ -631,11 +631,11 @@ W:\WorkAI\VVooComfyUI\comfy-extension\vvoo_comfy_mcp
 
 If the destination exists and resolves to the same source, report `already-installed`. If it points elsewhere or is a normal directory, fail without deleting or overwriting it.
 
-- [ ] **Step 2: Write setup and safety documentation**
+- [x] **Step 2: Write setup and safety documentation**
 
 `README.md` must include prerequisites, `npm install`, `npm run verify`, installer invocation, the required Comfy Desktop restart, Codex project restart/reload for `.codex/config.toml`, all tool names, the read→revision→write sequence, restore instructions, and initial limitations.
 
-- [ ] **Step 3: Run full repository verification before external installation**
+- [x] **Step 3: Run full repository verification before external installation**
 
 Run:
 
