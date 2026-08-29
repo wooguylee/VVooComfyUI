@@ -327,3 +327,8 @@ GREEN 및 전체 검증:
 - 현재 ComfyUI Python process 시작 시각: `2026-08-29 20:58:22`, `2026-08-29 20:58:33`; 이 단계에서는 프로세스를 종료하거나 재시작하지 않았다.
 
 현재 404는 실행 중인 Comfy Desktop을 자동 종료하지 않았고 새 Python route/frontend JavaScript가 아직 메모리에 로드되지 않았음을 뜻한다. 다음 단계는 사용자가 Comfy Desktop을 완전히 재시작하고 Codex 프로젝트를 새 세션으로 여는 것이다.
+
+Git 결과:
+
+- 구현 commit: `21ab962 feat: control live Comfy workflow tabs`
+- `origin/main` push: 성공 (`36a1c8b..21ab962`)
