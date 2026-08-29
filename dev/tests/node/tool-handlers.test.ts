@@ -223,6 +223,30 @@ describe("tool handlers", () => {
     });
   });
 
+  it("maps the MCP add-node field to the bridge node type", async () => {
+    const dependencies = createDependencies();
+    const handlers = createToolHandlers(dependencies);
+
+    await handlers.comfy_canvas_apply_patch({
+      expected_revision: revision,
+      operations: [
+        { op: "add_node", node_type: "CLIPTextEncode", ref: "positive" },
+      ],
+    });
+
+    expect(dependencies.bridge.command).toHaveBeenCalledWith({
+      command: "canvas.apply_patch",
+      payload: {
+        expected_revision: revision,
+        operations: [
+          { op: "add_node", type: "CLIPTextEncode", ref: "positive" },
+        ],
+        confirm_mass_delete: false,
+      },
+      timeout_ms: 15_000,
+    });
+  });
+
   it("forwards confirmed replacement and snapshot restore commands", async () => {
     const dependencies = createDependencies();
     const handlers = createToolHandlers(dependencies);

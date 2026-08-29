@@ -234,7 +234,7 @@ export function createMcpServer(handlers: ToolHandlers): McpServer {
     {
       title: "Patch live Comfy canvas",
       description:
-        "Atomically add, remove, move, resize, configure, connect, or disconnect nodes after checking expected_revision.",
+        "Atomically add, remove, move, resize, configure, connect, or disconnect nodes after checking expected_revision. add_node uses node_type for the ComfyUI node class.",
       inputSchema: ApplyPatchInputSchema,
       annotations: DESTRUCTIVE_WRITE,
     },

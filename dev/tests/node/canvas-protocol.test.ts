@@ -90,8 +90,8 @@ describe("ApplyPatchInputSchema", () => {
       ApplyPatchInputSchema.parse({
         expected_revision: revision,
         operations: [
-          { op: "add_node", type: "A", ref: "new-node" },
-          { op: "add_node", type: "B", ref: "new-node" },
+          { op: "add_node", node_type: "A", ref: "new-node" },
+          { op: "add_node", node_type: "B", ref: "new-node" },
         ],
       }),
     ).toThrow(/ref/i);

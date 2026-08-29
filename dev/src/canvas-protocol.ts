@@ -148,6 +148,15 @@ export const PatchOperationSchema = z.discriminatedUnion("op", [
     .strict(),
 ]);
 
+const ToolAddNodeOperationSchema = AddNodeOperationSchema.omit({ type: true })
+  .extend({ node_type: z.string().min(1) })
+  .strict();
+
+const ToolPatchOperationSchema = z.discriminatedUnion("op", [
+  ToolAddNodeOperationSchema,
+  ...PatchOperationSchema.options.slice(1),
+]);
+
 const SessionIdSchema = z.string().min(1).optional();
 
 const applyPatchPayloadShape = {
@@ -158,12 +167,12 @@ const applyPatchPayloadShape = {
 };
 
 function rejectDuplicateNodeRefs(
-  value: { operations: PatchOperation[] },
+  value: { operations: Array<{ op: string; ref?: string }> },
   context: z.RefinementCtx,
 ): void {
     const refs = new Set<string>();
     value.operations.forEach((operation, index) => {
-      if (operation.op !== "add_node") {
+      if (operation.op !== "add_node" || operation.ref === undefined) {
         return;
       }
       if (refs.has(operation.ref)) {
@@ -185,7 +194,10 @@ const ApplyPatchPayloadSchema = z
 export const ApplyPatchInputSchema = z
   .object({
     session_id: SessionIdSchema,
-    ...applyPatchPayloadShape,
+    workflow_id: WorkflowIdSchema.optional(),
+    expected_revision: RevisionSchema,
+    operations: z.array(ToolPatchOperationSchema).min(1),
+    confirm_mass_delete: z.boolean().default(false),
   })
   .strict()
   .superRefine(rejectDuplicateNodeRefs);

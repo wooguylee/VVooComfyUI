@@ -166,6 +166,23 @@ describe("workflow reads", () => {
     ]);
   });
 
+  it("lists an inactive tab whose frontend state is a proxy", async () => {
+    const { context, second } = createWorkflowContext();
+    second.activeState = new Proxy(second.activeState, {});
+
+    const result = await listWorkflows(context);
+
+    expect(result.workflows).toHaveLength(2);
+    expect(result.workflows[1]).toEqual(
+      expect.objectContaining({
+        workflow_id: "workflows/second.json",
+        active: false,
+        node_count: 1,
+        revision: expect.stringMatching(/^[a-f0-9]{64}$/),
+      }),
+    );
+  });
+
   it("loads an inactive workflow for reading without selecting it", async () => {
     const { context, store, second } = createWorkflowContext({
       second: { loaded: false },

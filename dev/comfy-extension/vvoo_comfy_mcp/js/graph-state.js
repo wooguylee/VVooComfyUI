@@ -14,7 +14,12 @@ function normalizeJson(value) {
 
 export function cloneJson(value) {
   if (typeof structuredClone === "function") {
-    return structuredClone(value);
+    try {
+      return structuredClone(value);
+    } catch {
+      // Vue exposes inactive workflow state through a Proxy, which is still
+      // JSON serializable but cannot be cloned by structuredClone.
+    }
   }
   return JSON.parse(JSON.stringify(value));
 }

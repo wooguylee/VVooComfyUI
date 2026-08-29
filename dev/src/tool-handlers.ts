@@ -224,7 +224,17 @@ export function createToolHandlers(dependencies: ToolHandlerDependencies) {
       input: unknown,
     ): Promise<BridgeCommandResult> {
       const parsed = ApplyPatchInputSchema.parse(input);
-      const { session_id: sessionId, ...payload } = parsed;
+      const { session_id: sessionId, operations, ...rest } = parsed;
+      const payload = {
+        ...rest,
+        operations: operations.map((operation) => {
+          if (operation.op !== "add_node" || !("node_type" in operation)) {
+            return operation;
+          }
+          const { node_type: nodeType, ...addNode } = operation;
+          return { ...addNode, type: nodeType };
+        }),
+      };
       return bridge.command(
         createCanvasCommand(
           "canvas.apply_patch",

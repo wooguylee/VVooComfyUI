@@ -102,7 +102,7 @@ pwsh -File scripts/install-comfy-extension.ps1 -ComfyRoot 'C:\path\to\ComfyUI'
 7. 결과의 새 revision과 `backup_id`를 보관한다.
 8. 필요하면 같은 workflow 탭의 새 revision과 backup ID로 `comfy_canvas_restore`를 호출한다.
 
-`add_node`의 임시 `ref`를 같은 transaction의 `connect`에서 참조할 수 있다. 지원 patch는 노드 추가·삭제·이동·크기 변경, 제목·properties·widget·실행 mode·색상·collapse 변경, 연결·해제다. widget 이름에는 예를 들어 CLIP Text Encode 노드의 `text`를 지정해 positive/negative 프롬프트를 설정할 수 있다.
+`add_node`는 `node_type`과 임시 `ref`를 받으며, 그 `ref`를 같은 transaction의 `connect`에서 참조할 수 있다. 지원 patch는 노드 추가·삭제·이동·크기 변경, 제목·properties·widget·실행 mode·색상·collapse 변경, 연결·해제다. widget 이름에는 예를 들어 CLIP Text Encode 노드의 `text`를 지정해 positive/negative 프롬프트를 설정할 수 있다.
 
 revision이 달라졌으면 `REVISION_CONFLICT` 또는 `WORKFLOW_REVISION_CONFLICT`로 변경을 거절하므로 대상 탭을 다시 읽고 의도를 재적용해야 한다. 노드의 절반 이상을 삭제할 때는 `confirm_mass_delete: true`, 전체 교체에는 `confirm_replace: true`, 수정 탭 닫기에는 `confirm_discard: true`가 필요하다. 변경 전 workflow는 최근 10개까지 세션 메모리에 snapshot으로 유지되고, 작업 도중 하나라도 실패하면 같은 workflow 탭에서 전체 transaction을 원래 상태로 되돌린다.
 
